@@ -3,6 +3,7 @@ package com.example.tfg_3tiles_yubol.viewModel
 import androidx.lifecycle.ViewModel
 import com.example.tfg_3tiles_yubol.data.model.Tile
 import com.example.tfg_3tiles_yubol.domain.CheckBlockUseCase
+import com.example.tfg_3tiles_yubol.domain.CheckMatchUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,7 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class GameViewModel() : ViewModel() {
 
 
-    // private val checkMatchUseCase = CheckMatchUseCase()
+     private val checkMatchUseCase = CheckMatchUseCase()
      private val checkBlockUseCase = CheckBlockUseCase()
 
     private val _gameState = MutableStateFlow(GameState())
@@ -31,22 +32,36 @@ class GameViewModel() : ViewModel() {
     fun onTileClick(tile: Tile) {
         val state = _gameState.value
 
-        // si esta bloqueado, no hacer nada
-        if (tile.isBlocked) return
+        // si esta bloqueado o terminado, no hacer nada
+        if (tile.isBlocked || state.isGameOver) return
 
 
         val newTiles = state.tiles.filter { it.id != tile.id }
-        val trayAfterMatch  = state.trayTiles + tile
+
+        var newTray = state.trayTiles + tile
+
+        val matchedTiles = checkMatchUseCase.checkMatch(newTray)
+        var newScore = state.score
+
+        if (matchedTiles.isNotEmpty()) {
+            newTray = newTray.filterNot { matchedTiles.contains(it) }
+            newScore += 10
+        }
+
+        val isGameOver = newTray.size >= 7
+
 
         _gameState.value = state.copy(
             tiles = updateBlockedState(newTiles),
-            trayTiles = trayAfterMatch
+            trayTiles = newTray,
+            score = newScore,
+            isGameOver = isGameOver
         )
 
     }
 
 
-    // para cambiar color si esta activa
+    // para actualizar el estado de ocultación de la tarjeta
     private fun updateBlockedState(tiles: List<Tile>): List<Tile> {
         return tiles.map { tile ->
             tile.copy(isBlocked = checkBlockUseCase.isBlocked(tile, tiles))

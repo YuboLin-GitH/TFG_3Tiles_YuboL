@@ -42,6 +42,7 @@ fun GameScreen(viewModel: GameViewModel = viewModel()) {
             Tile(id = 3, type = 2, x = 120f, y = 320f, z = 2, iconRes = R.drawable.crab),
             //para pureba superpuestas
             Tile(id = 4, type = 2, x = 60f, y = 200f, z = 2, iconRes = R.drawable.crab),
+            Tile(id = 5, type = 2, x = 80f, y = 200f, z = 3, iconRes = R.drawable.crab),
         ))
     }
 
