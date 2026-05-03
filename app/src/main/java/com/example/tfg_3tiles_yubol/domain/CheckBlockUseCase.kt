@@ -4,7 +4,7 @@ import com.example.tfg_3tiles_yubol.data.model.Tile
 
 class CheckBlockUseCase {
 
-    private val tileSize = 64f
+    private val tileSize = 60f
 
 
     // funcion para prueba esta bloqueado
