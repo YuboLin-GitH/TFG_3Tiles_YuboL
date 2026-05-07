@@ -1,10 +1,14 @@
 package com.example.tfg_3tiles_yubol.viewModel
 
+
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import com.example.tfg_3tiles_yubol.data.model.Level
 import com.example.tfg_3tiles_yubol.data.model.Tile
 import com.example.tfg_3tiles_yubol.domain.CheckBlockUseCase
 import com.example.tfg_3tiles_yubol.domain.CheckMatchUseCase
+import com.example.tfg_3tiles_yubol.utils.SoundManager
+
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,7 +31,26 @@ class GameViewModel() : ViewModel() {
     }
 
 
+    //musica
+    private var soundManager: SoundManager? = null
 
+    fun initSound(context: Context) {
+        soundManager = SoundManager(context)
+        soundManager?.startBGM()
+    }
+
+    fun pauseMusic() {
+        soundManager?.pauseBGM()
+    }
+
+    fun resumeMusic() {
+        soundManager?.startBGM()
+    }
+
+    fun releaseMusic() {
+        soundManager?.release()
+        soundManager = null
+    }
 
     //Haz clic -> Comprueba si está bloqueado -> Si no está bloqueado
     // mueve la tarjeta de tiles a trayTiles
@@ -44,6 +67,8 @@ class GameViewModel() : ViewModel() {
 
         val matchedTiles = checkMatchUseCase.checkMatch(newTray)
         var newScore = state.score
+
+        soundManager?.playClick()
 
         if (matchedTiles.isNotEmpty()) {
             newTray = newTray.filterNot { matchedTiles.contains(it) }
@@ -136,3 +161,4 @@ class GameViewModel() : ViewModel() {
 
 
 }
+

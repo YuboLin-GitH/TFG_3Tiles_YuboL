@@ -24,7 +24,7 @@ import com.example.tfg_3tiles_yubol.R
 fun StartScreen(onPlayClick: () -> Unit, onExitClick: () -> Unit) {
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // 1. 全屏背景图
+        // Imagen de fondo a pantalla completa
         Image(
             painter = painterResource(id = R.drawable.fondo),
             contentDescription = "Fondo Marino",
@@ -32,13 +32,12 @@ fun StartScreen(onPlayClick: () -> Unit, onExitClick: () -> Unit) {
             contentScale = ContentScale.Crop
         )
 
-        // 2. 主体内容（居中排列）
+        // Contenido principal
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // 🌟 装饰：放一个游戏里的螃蟹图标在标题上方点缀，增加可爱度
             Image(
                 painter = painterResource(id = R.drawable.cangrejo),
                 contentDescription = "Mascota",
@@ -47,7 +46,7 @@ fun StartScreen(onPlayClick: () -> Unit, onExitClick: () -> Unit) {
                     .padding(bottom = 16.dp)
             )
 
-            // 🌟 标题：大字号 + 粗体 + 阴影（增加立体感，让白字在背景上清晰可见）
+            //  título
             Text(
                 text = "Océano Match",
                 style = TextStyle(
@@ -64,7 +63,7 @@ fun StartScreen(onPlayClick: () -> Unit, onExitClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(70.dp))
 
-            // 🌟 开始按钮：珊瑚橙色，大圆角，带阴影高度（Elevation）
+            // Botón de inicio
             Button(
                 onClick = onPlayClick,
                 modifier = Modifier
@@ -72,7 +71,7 @@ fun StartScreen(onPlayClick: () -> Unit, onExitClick: () -> Unit) {
                     .height(65.dp),
                 shape = RoundedCornerShape(32.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFF7F50) // Coral Orange 珊瑚橙
+                    containerColor = Color(0xFFFF7F50) // Coral Orange
                 ),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 10.dp)
             ) {
@@ -86,7 +85,7 @@ fun StartScreen(onPlayClick: () -> Unit, onExitClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 🌟 退出按钮：深海蓝色，和开始按钮形成主次对比
+            // Botón de salida
             Button(
                 onClick = onExitClick,
                 modifier = Modifier
@@ -94,7 +93,7 @@ fun StartScreen(onPlayClick: () -> Unit, onExitClick: () -> Unit) {
                     .height(65.dp),
                 shape = RoundedCornerShape(32.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF00509E) // Deep Sea Blue 海蓝色
+                    containerColor = Color(0xFF00509E) // Deep Sea Blue
                 ),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
             ) {

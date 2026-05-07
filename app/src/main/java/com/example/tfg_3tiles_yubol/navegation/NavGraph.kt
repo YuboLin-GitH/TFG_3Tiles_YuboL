@@ -9,9 +9,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.tfg_3tiles_yubol.ui.GameScreen
 import com.example.tfg_3tiles_yubol.ui.StartScreen
+import com.example.tfg_3tiles_yubol.utils.SoundManager
+import com.example.tfg_3tiles_yubol.viewModel.GameViewModel
 
 @Composable
-fun NavGraph() {
+fun NavGraph(viewModel: GameViewModel) {
     val navController = rememberNavController()
 
     NavHost(
@@ -28,7 +30,6 @@ fun NavGraph() {
                     navController.navigate(NivelJuego)
                 },
                 onExitClick = {
-
                     (context as? android.app.Activity)?.finish()
                 }
             )
@@ -36,7 +37,7 @@ fun NavGraph() {
 
 
         composable<NivelJuego> {
-            GameScreen()
+            GameScreen(viewModel = viewModel)
         }
     }
 }
