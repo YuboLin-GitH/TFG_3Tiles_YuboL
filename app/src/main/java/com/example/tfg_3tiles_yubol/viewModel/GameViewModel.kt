@@ -3,22 +3,26 @@ package com.example.tfg_3tiles_yubol.viewModel
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.tfg_3tiles_yubol.data.model.Level
 import com.example.tfg_3tiles_yubol.data.model.Tile
+import com.example.tfg_3tiles_yubol.data.local.TileIconMap
 import com.example.tfg_3tiles_yubol.domain.CheckBlockUseCase
 import com.example.tfg_3tiles_yubol.domain.CheckMatchUseCase
 import com.example.tfg_3tiles_yubol.utils.SoundManager
 
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 
 class GameViewModel() : ViewModel() {
 
 
      private val checkMatchUseCase = CheckMatchUseCase()
-     private val checkBlockUseCase = CheckBlockUseCase()
+     private var checkBlockUseCase = CheckBlockUseCase(55f)
 
     private var currentLevel = 1
     private val _gameState = MutableStateFlow(GameState())
@@ -57,35 +61,65 @@ class GameViewModel() : ViewModel() {
     fun onTileClick(tile: Tile) {
         val state = _gameState.value
 
-        // si esta bloqueado o terminado, no hacer nada
-        if (tile.isBlocked || state.isGameOver) return
-
+        if (tile.isBlocked || state.isGameOver || state.isAnimating) return
 
         val newTiles = state.tiles.filter { it.id != tile.id }
 
-        var newTray = state.trayTiles + tile
-
-        val matchedTiles = checkMatchUseCase.checkMatch(newTray)
-        var newScore = state.score
-
-        soundManager?.playClick()
-
-        if (matchedTiles.isNotEmpty()) {
-            newTray = newTray.filterNot { matchedTiles.contains(it) }
-            newScore += 10
-        }
-
-        val isGameOver = newTray.size >= 7
-        val isWin = newTiles.isEmpty() && newTray.isEmpty()
-
         _gameState.value = state.copy(
             tiles = updateBlockedState(newTiles),
-            trayTiles = newTray,
-            score = newScore,
-            isGameOver = isGameOver,
-            isWin = isWin
+            flyingTile = tile,
+            isAnimating = true
         )
+        soundManager?.playClick()
 
+        viewModelScope.launch {
+            delay(FLY_DURATION_MS)
+
+            val s = _gameState.value
+            val newTray = s.trayTiles + tile
+            val matched = checkMatchUseCase.checkMatch(newTray)
+
+            if (matched.isNotEmpty()) {
+                _gameState.value = s.copy(
+                    trayTiles = newTray,
+                    flyingTile = null,
+                    eliminatingTiles = matched,
+                    isAnimating = true
+                )
+                soundManager?.playMatch()
+
+                delay(ELIMINATE_DURATION_MS)
+
+                val final = _gameState.value
+                val afterMatchTray = final.trayTiles.filterNot { t -> matched.any { it.id == t.id } }
+                val newScore = final.score + 10
+                val finalTiles = updateBlockedState(final.tiles)
+                _gameState.value = final.copy(
+                    tiles = finalTiles,
+                    trayTiles = afterMatchTray,
+                    score = newScore,
+                    eliminatingTiles = emptyList(),
+                    isGameOver = afterMatchTray.size >= 7,
+                    isWin = finalTiles.isEmpty() && afterMatchTray.isEmpty(),
+                    isAnimating = false
+                )
+            } else {
+                val finalTiles = updateBlockedState(s.tiles)
+                _gameState.value = s.copy(
+                    tiles = finalTiles,
+                    trayTiles = newTray,
+                    flyingTile = null,
+                    isGameOver = newTray.size >= 7,
+                    isWin = finalTiles.isEmpty() && newTray.isEmpty(),
+                    isAnimating = false
+                )
+            }
+        }
+    }
+
+    companion object {
+        private const val FLY_DURATION_MS = 200L
+        private const val ELIMINATE_DURATION_MS = 250L
     }
 
 
@@ -123,9 +157,21 @@ class GameViewModel() : ViewModel() {
         loadTiles(level.tiles)
     }
 
+    fun getSfxVolume(): Float = soundManager?.sfxVolume ?: 1f
+    fun getBgmVolume(): Float = soundManager?.bgmVolume ?: 1f
+
+    fun setSfxVolume(volume: Float) {
+        soundManager?.setSfxVolume(volume)
+    }
+
+    fun setBgmVolume(volume: Float) {
+        soundManager?.setBgmVolume(volume)
+    }
+
     // Deshacer
     fun undoMove() {
         val state = _gameState.value
+        if (state.isAnimating || state.trayTiles.isEmpty()) return
         // si hay carta es vuelve atras
         if (state.trayTiles.isNotEmpty()) {
             val lastTile = state.trayTiles.last() // ultimo carta
@@ -143,17 +189,19 @@ class GameViewModel() : ViewModel() {
     // Mezclar
     fun shuffleTiles() {
         val state = _gameState.value
+        if (state.isAnimating) return
         val currentTiles = state.tiles
 
-        // Extrae todos los iconos del escritorio y cambia su orden.
-        val shuffledIcons = currentTiles.map { it.iconRes }.shuffled()
+        val shuffledTypes = currentTiles.map { it.type }.shuffled()
 
-        // Solo se reenvían los iconos a las cartas.
         val shuffledTiles = currentTiles.mapIndexed { index, tile ->
-            tile.copy(iconRes = shuffledIcons[index])
+            val newType = shuffledTypes[index]
+            tile.copy(
+                type = newType,
+                iconRes = TileIconMap.icons[newType]!!
+            )
         }
 
-        // Actualizar
         _gameState.value = state.copy(
             tiles = shuffledTiles
         )

@@ -11,23 +11,5 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
-private val OceanoColorScheme = lightColorScheme(
-    primary = DeepSeaBlue,
-    secondary = LightSeaBlue,
-    tertiary = CoralOrange,
-    background = DeepSeaBlue,
-    surface = WhiteTile,
-    onPrimary = androidx.compose.ui.graphics.Color.White,
-    onSecondary = androidx.compose.ui.graphics.Color.Black
-)
 
-@Composable
-fun OceanoMatchTheme(
-    content: @Composable () -> Unit
-) {
-    MaterialTheme(
-        colorScheme = OceanoColorScheme,
-        typography = Typography,
-        content = content
-    )
-}
+

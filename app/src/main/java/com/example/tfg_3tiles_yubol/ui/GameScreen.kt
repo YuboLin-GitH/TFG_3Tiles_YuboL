@@ -1,6 +1,9 @@
 package com.example.tfg_3tiles_yubol.ui
 
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,41 +17,64 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.tfg_3tiles_yubol.viewModel.GameViewModel
 import com.example.tfg_3tiles_yubol.R
-import com.example.tfg_3tiles_yubol.data.local.LevelData
 import com.example.tfg_3tiles_yubol.data.model.Tile
+import kotlin.math.roundToInt
 
 @Composable
-fun GameScreen(viewModel: GameViewModel = viewModel()) {
-// prueba
+fun GameScreen(viewModel: GameViewModel) {
     val state by viewModel.gameState.collectAsState()
+    val density = LocalDensity.current
+
+    var boxHeightPx by remember { mutableIntStateOf(0) }
+    var showSettings by remember { mutableStateOf(false) }
+    var sfxVolume by remember { mutableStateOf(1f) }
+    var bgmVolume by remember { mutableStateOf(1f) }
+
     LaunchedEffect(Unit) {
-        viewModel.loadLevel(LevelData.getLevel1())
+        viewModel.loadCurrentLevel()
     }
 
+    // Tray area from bottom: 16dp padding + ~48dp buttons + 8dp gap + 135dp tray
+    val trayCenterFromBottomDp = 16 + 48 + 8 + 135 / 2
+    val trayStartXDp = 16
 
-
-
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .onGloballyPositioned { boxHeightPx = it.size.height }
+    ) {
 
         Image(
             painter = painterResource(id = R.drawable.fondo),
@@ -57,13 +83,42 @@ fun GameScreen(viewModel: GameViewModel = viewModel()) {
             contentScale = ContentScale.Crop
         )
 
-        state.tiles.sortedBy { it.z }.forEach { tile ->
-            TileComponent(
-                tile = tile,
-                onClick = { viewModel.onTileClick(tile) }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 40.dp, start = 12.dp, end = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "⚙",
+                fontSize = 28.sp,
+                color = Color.White,
+                modifier = Modifier.clickable { showSettings = true }
+            )
+            Text(
+                text = "Nivel ${state.currentLevel}",
+                fontSize = 20.sp,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "${state.score}",
+                fontSize = 20.sp,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
             )
         }
 
+        state.tiles.sortedBy { it.z }.forEach { tile ->
+            androidx.compose.runtime.key(tile.id) {
+                TileComponent(
+                    tile = tile,
+                    tileSize = state.tileSize,
+                    onClick = { viewModel.onTileClick(tile) }
+                )
+            }
+        }
 
         Column(
             modifier = Modifier
@@ -72,7 +127,6 @@ fun GameScreen(viewModel: GameViewModel = viewModel()) {
                 .padding(bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            //  boton deshacer y mezclar
             Row(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.padding(bottom = 8.dp)
@@ -85,11 +139,10 @@ fun GameScreen(viewModel: GameViewModel = viewModel()) {
                 }
             }
 
-            // 2. parte Tray
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp)
+                    .height(135.dp)
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.tray_carta),
@@ -98,22 +151,70 @@ fun GameScreen(viewModel: GameViewModel = viewModel()) {
                     contentScale = ContentScale.FillBounds
                 )
 
-                Row(
+                LazyRow(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    state.trayTiles.forEach { tile ->
+                    items(
+                        items = state.trayTiles,
+                        key = { it.id }
+                    ) { tile ->
+                        val isEliminating = state.eliminatingTiles.any { it.id == tile.id }
                         TileComponent(
                             tile = tile.copy(x = 0f, y = 0f),
-                            onClick = {}
+                            tileSize = state.tileSize,
+                            onClick = {},
+                            modifier = Modifier.animateItem(),
+                            isEliminating = isEliminating
                         )
                     }
                 }
             }
         }
+
+        // Flying tile overlay
+        if (state.flyingTile != null) {
+            val flyTile = state.flyingTile!!
+            val tilePx = (state.tileSize * density.density).roundToInt()
+            val startX = (flyTile.x * density.density).roundToInt()
+            val startY = (flyTile.y * density.density).roundToInt()
+
+            val trayStartX = with(density) { trayStartXDp.dp.roundToPx() }
+            val trayY = boxHeightPx - with(density) { trayCenterFromBottomDp.dp.roundToPx() }
+
+            val targetX = trayStartX + state.trayTiles.size *
+                    (tilePx + with(density) { 4.dp.roundToPx() })
+
+            val offsetAnim = remember {
+                Animatable(
+                    initialValue = IntOffset(startX, startY),
+                    typeConverter = IntOffset.VectorConverter
+                )
+            }
+
+            LaunchedEffect(flyTile.id) {
+                offsetAnim.animateTo(
+                    targetValue = IntOffset(targetX, trayY),
+                    animationSpec = tween(durationMillis = 200)
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .offset { offsetAnim.value }
+                    .size(state.tileSize.dp)
+            ) {
+                TileComponent(
+                    tile = flyTile.copy(x = 0f, y = 0f),
+                    tileSize = state.tileSize,
+                    onClick = {}
+                )
+            }
+        }
+
         if (state.isGameOver) {
             Box(
                 modifier = Modifier
@@ -142,6 +243,38 @@ fun GameScreen(viewModel: GameViewModel = viewModel()) {
                 }
             }
         }
+        if (showSettings) {
+            AlertDialog(
+                onDismissRequest = { showSettings = false },
+                title = { Text("Ajustes") },
+                text = {
+                    Column {
+                        Text("Efectos de sonido")
+                        Slider(
+                            value = sfxVolume,
+                            onValueChange = {
+                                sfxVolume = it
+                                viewModel.setSfxVolume(it)
+                            }
+                        )
+                        Text("Música de fondo")
+                        Slider(
+                            value = bgmVolume,
+                            onValueChange = {
+                                bgmVolume = it
+                                viewModel.setBgmVolume(it)
+                            }
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = { showSettings = false }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+
         if (state.isWin) {
             Box(
                 modifier = Modifier
@@ -164,7 +297,6 @@ fun GameScreen(viewModel: GameViewModel = viewModel()) {
                         fontSize = 20.sp,
                         color = Color.White
                     )
-                    //  solo mostrar si hay siguiente nivel
                     if (state.currentLevel == 1) {
                         Button(onClick = { viewModel.goToNextLevel() }) {
                             Text("Siguiente nivel →")
@@ -181,13 +313,33 @@ fun GameScreen(viewModel: GameViewModel = viewModel()) {
 
 
 @Composable
-fun TileComponent(tile: Tile, onClick: () -> Unit) {
-    // posicion
+fun TileComponent(
+    tile: Tile,
+    tileSize: Float,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    isEliminating: Boolean = false
+) {
+    val scale = remember { Animatable(1f) }
+    val alpha = remember { Animatable(1f) }
+
+    LaunchedEffect(isEliminating) {
+        if (isEliminating) {
+            scale.animateTo(1.3f, tween(200))
+            alpha.animateTo(0f, tween(250))
+        } else {
+            scale.snapTo(1f)
+            alpha.snapTo(1f)
+        }
+    }
+
     Box(
-        modifier = Modifier
+        modifier = modifier
             .offset(x = tile.x.dp, y = tile.y.dp)
-            .size(60.dp) // tamaño
-            .clickable(enabled = !tile.isBlocked) { onClick() }
+            .size(tileSize.dp)
+            .scale(scale.value)
+            .alpha(alpha.value)
+            .clickable(enabled = !tile.isBlocked && !isEliminating) { onClick() }
     ) {
         // fondo de carta
         Card(

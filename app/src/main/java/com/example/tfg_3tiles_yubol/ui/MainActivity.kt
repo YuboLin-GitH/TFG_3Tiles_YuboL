@@ -4,9 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.material3.MaterialTheme
 import com.example.tfg_3tiles_yubol.navegation.NavGraph
-
-import com.example.tfg_3tiles_yubol.ui.theme.OceanoMatchTheme
 import com.example.tfg_3tiles_yubol.viewModel.GameViewModel
 
 
@@ -19,7 +18,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         viewModel.initSound(this)
         setContent {
-            OceanoMatchTheme {
+            MaterialTheme {
 
                 NavGraph(viewModel = viewModel)
 

@@ -6,9 +6,11 @@ import com.example.tfg_3tiles_yubol.data.model.Tile
 object LevelData {
 
     fun getLevel1(): Level {
-        val tileSize = 85f
-        val startX = 70f
-        val startY = 200f
+        val tileSize = 55f
+        val spacing = 18f
+        val layerOffset = 35f
+        val startX = 45f
+        val startY = 130f
 
         val allTypes = mutableListOf<Int>().apply {
             for (type in 1..3) {
@@ -21,7 +23,7 @@ object LevelData {
         val tiles = mutableListOf<Tile>()
 
         for (z in 1..3) {
-            val offset = (z - 1) * 15f
+            val offset = (z - 1) * layerOffset
             for (row in 0..2) {
                 for (col in 0..2) {
                     val type = allTypes[typeIndex++]
@@ -29,8 +31,8 @@ object LevelData {
                         Tile(
                             id = id++,
                             type = type,
-                            x = startX + col * tileSize + offset,
-                            y = startY + row * tileSize + offset,
+                            x = startX + col * (tileSize + spacing) + offset,
+                            y = startY + row * (tileSize + spacing) + offset,
                             z = z,
                             iconRes = TileIconMap.icons[type]!!
                         )
@@ -44,7 +46,7 @@ object LevelData {
 
     fun getLevel2(): Level {
 
-        val tileSize = 60f
+        val tileSize = 55f
 
         // Un total de 105 cartas (garantizando exactamente 35 conjuntos de tres cartas iguales)
         val allTypes = mutableListOf<Int>().apply {
@@ -59,33 +61,33 @@ object LevelData {
         //
         val layers = listOf(
             // Cuerpo principal
-            LayerConfig(z = 1, startX = 60f, startY = 150f, cols = 5, rows = 5), //  25
-            LayerConfig(z = 2, startX = 90f, startY = 180f, cols = 4, rows = 4), //  16
-            LayerConfig(z = 3, startX = 120f, startY = 210f, cols = 3, rows = 3), // 9
-            LayerConfig(z = 4, startX = 150f, startY = 240f, cols = 2, rows = 2), // 4
-            LayerConfig(z = 5, startX = 180f, startY = 270f, cols = 1, rows = 1), // 1
+            LayerConfig(z = 1, startX = 50f, startY = 150f, cols = 5, rows = 5), //  25
+            LayerConfig(z = 2, startX = 80f, startY = 180f, cols = 4, rows = 4), //  16
+            LayerConfig(z = 3, startX = 110f, startY = 210f, cols = 3, rows = 3), // 9
+            LayerConfig(z = 4, startX = 140f, startY = 240f, cols = 2, rows = 2), // 4
+            LayerConfig(z = 5, startX = 170f, startY = 270f, cols = 1, rows = 1), // 1
 
             // Cabeza
-            LayerConfig(z = 1, startX = 60f, startY = 30f, cols = 5, rows = 2),  // 10
-            LayerConfig(z = 2, startX = 120f, startY = 30f, cols = 3, rows = 2), // 6
+            LayerConfig(z = 1, startX = 50f, startY = 80f, cols = 5, rows = 2),  // 10
+            LayerConfig(z = 2, startX = 110f, startY = 80f, cols = 3, rows = 2), // 6
 
 
             // pierna izquierda
-            LayerConfig(z = 1, startX = 60f, startY = 450f, cols = 2, rows = 3), // 6
-            LayerConfig(z = 2, startX = 60f, startY = 450f, cols = 2, rows = 2), // 4
+            LayerConfig(z = 1, startX = 50f, startY = 450f, cols = 2, rows = 3), // 6
+            LayerConfig(z = 2, startX = 50f, startY = 450f, cols = 2, rows = 2), // 4
             // Pierna derecha
-            LayerConfig(z = 1, startX = 240f, startY = 450f, cols = 2, rows = 3), // 6
-            LayerConfig(z = 2, startX = 240f, startY = 450f, cols = 2, rows = 2), // 4
+            LayerConfig(z = 1, startX = 230f, startY = 450f, cols = 2, rows = 3), // 6
+            LayerConfig(z = 2, startX = 230f, startY = 450f, cols = 2, rows = 2), // 4
 
 
             // Hombros prominentes a ambos lados
-            LayerConfig(z = 2, startX = 30f, startY = 150f, cols = 1, rows = 3), // 3
-            LayerConfig(z = 2, startX = 330f, startY = 150f, cols = 1, rows = 3), // 3
+            LayerConfig(z = 2, startX = 20f, startY = 150f, cols = 1, rows = 3), // 3
+            LayerConfig(z = 2, startX = 320f, startY = 150f, cols = 1, rows = 3), // 3
             // La carta en los piernas
-            LayerConfig(z = 3, startX = 90f, startY = 480f, cols = 1, rows = 2), // 2
-            LayerConfig(z = 3, startX = 270f, startY = 480f, cols = 1, rows = 2), // 2
+            LayerConfig(z = 3, startX = 80f, startY = 480f, cols = 1, rows = 2), // 2
+            LayerConfig(z = 3, startX = 260f, startY = 480f, cols = 1, rows = 2), // 2
             // oculta en lo profundo del centro.
-            LayerConfig(z = 6, startX = 180f, startY = 150f, cols = 1, rows = 4), // 4
+            LayerConfig(z = 6, startX = 170f, startY = 150f, cols = 1, rows = 4), // 4
         )
 
 

@@ -21,6 +21,11 @@ class SoundManager(context: Context) {
     private val matchSoundId: Int
     private val loadedSounds = mutableSetOf<Int>() // 记录已加载完成的音效
 
+    var sfxVolume = 1f
+        private set
+    var bgmVolume = 1f
+        private set
+
     init {
         // 设置加载完成监听器
         soundPool.setOnLoadCompleteListener { _, sampleId, status ->
@@ -29,8 +34,8 @@ class SoundManager(context: Context) {
             }
         }
 
-        clickSoundId = soundPool.load(context, R.raw.ui_click, 1)
-        matchSoundId = soundPool.load(context, R.raw.ui_click, 1)
+        clickSoundId = soundPool.load(context, R.raw.click, 1)
+        matchSoundId = soundPool.load(context, R.raw.match_3, 1)
     }
 
     private var mediaPlayer: MediaPlayer? = MediaPlayer.create(context, R.raw.lily_paddling_down_the_stream)
@@ -41,14 +46,23 @@ class SoundManager(context: Context) {
 
     fun playClick() {
         if (clickSoundId in loadedSounds) { // 只有加载完才播放
-            soundPool.play(clickSoundId, 1f, 1f, 1, 0, 1f)
+            soundPool.play(clickSoundId, sfxVolume, sfxVolume, 1, 0, 1f)
         }
     }
 
     fun playMatch() {
         if (matchSoundId in loadedSounds) {
-            soundPool.play(matchSoundId, 1f, 1f, 1, 0, 1f)
+            soundPool.play(matchSoundId, sfxVolume, sfxVolume, 1, 0, 1f)
         }
+    }
+
+    fun setSfxVolume(volume: Float) {
+        sfxVolume = volume.coerceIn(0f, 1f)
+    }
+
+    fun setBgmVolume(volume: Float) {
+        bgmVolume = volume.coerceIn(0f, 1f)
+        mediaPlayer?.setVolume(bgmVolume, bgmVolume)
     }
 
     fun startBGM() {

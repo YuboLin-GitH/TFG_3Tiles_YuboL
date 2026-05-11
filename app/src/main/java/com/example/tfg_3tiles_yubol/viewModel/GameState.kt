@@ -8,5 +8,9 @@ data class GameState(
     val score: Int = 0,  // no se si voy usar?
     val isGameOver: Boolean = false, // juego esta finado?
     val isWin: Boolean = false,
-    val currentLevel: Int = 1
+    val currentLevel: Int = 1,
+    val tileSize: Float = 55f,
+    val flyingTile: Tile? = null,
+    val eliminatingTiles: List<Tile> = emptyList(),
+    val isAnimating: Boolean = false
 )

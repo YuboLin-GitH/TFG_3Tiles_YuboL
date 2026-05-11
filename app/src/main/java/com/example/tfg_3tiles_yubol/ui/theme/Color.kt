@@ -17,6 +17,3 @@ val LightSeaBlue = Color(0xFF7AC1E1)
 val CoralOrange = Color(0xFFE87A6E)
 val SandBeach = Color(0xFFCBB587)
 
-// 基础色
-val WhiteTile = Color(0xFFF8F9FA)
-val BlockedOverlay = Color(0x66000000)
