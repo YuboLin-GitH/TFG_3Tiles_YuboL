@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -54,7 +55,7 @@ import com.example.tfg_3tiles_yubol.data.model.Tile
 import kotlin.math.roundToInt
 
 @Composable
-fun GameScreen(viewModel: GameViewModel) {
+fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackToMenu: () -> Unit = {}) {
     val state by viewModel.gameState.collectAsState()
     val density = LocalDensity.current
 
@@ -275,6 +276,39 @@ fun GameScreen(viewModel: GameViewModel) {
             )
         }
 
+        if (state.showLevelUp) {
+            val scale = remember { Animatable(0.5f) }
+            LaunchedEffect(Unit) {
+                scale.animateTo(1f, tween(400))
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "⚡",
+                        fontSize = 64.sp,
+                        modifier = Modifier.scale(scale.value)
+                    )
+                    Text(
+                        text = "¡Dificultad aumentada!",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Yellow
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Nivel 2",
+                        fontSize = 20.sp,
+                        color = Color.White
+                    )
+                }
+            }
+        }
+
         if (state.isWin) {
             Box(
                 modifier = Modifier
@@ -301,8 +335,15 @@ fun GameScreen(viewModel: GameViewModel) {
                         Button(onClick = { viewModel.goToNextLevel() }) {
                             Text("Siguiente nivel →")
                         }
+                    } else {
+                        Button(onClick = onViewRanking) {
+                            Text("Ver Ranking")
+                        }
                     }
-                    Button(onClick = { viewModel.resetGame() }) {
+                    Button(onClick = {
+                        viewModel.resetGame()
+                        onBackToMenu()
+                    }) {
                         Text("Jugar de nuevo")
                     }
                 }

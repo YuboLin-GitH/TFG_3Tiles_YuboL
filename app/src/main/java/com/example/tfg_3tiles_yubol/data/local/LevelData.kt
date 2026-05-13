@@ -69,7 +69,7 @@ object LevelData {
 
             // Cabeza
             LayerConfig(z = 1, startX = 50f, startY = 80f, cols = 5, rows = 2),  // 10
-            LayerConfig(z = 2, startX = 110f, startY = 80f, cols = 3, rows = 2), // 6
+            LayerConfig(z = 2, startX = 95f, startY = 80f, cols = 4, rows = 2), // 8
 
 
             // pierna izquierda
@@ -81,8 +81,8 @@ object LevelData {
 
 
             // Hombros prominentes a ambos lados
-            LayerConfig(z = 2, startX = 20f, startY = 150f, cols = 1, rows = 3), // 3
-            LayerConfig(z = 2, startX = 320f, startY = 150f, cols = 1, rows = 3), // 3
+            LayerConfig(z = 2, startX = 20f, startY = 150f, cols = 1, rows = 2), // 2
+            LayerConfig(z = 2, startX = 320f, startY = 150f, cols = 1, rows = 2), // 2
             // La carta en los piernas
             LayerConfig(z = 3, startX = 80f, startY = 480f, cols = 1, rows = 2), // 2
             LayerConfig(z = 3, startX = 260f, startY = 480f, cols = 1, rows = 2), // 2

@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.sp
 import com.example.tfg_3tiles_yubol.R
 
 @Composable
-fun StartScreen(onPlayClick: () -> Unit, onExitClick: () -> Unit) {
+fun StartScreen(onPlayClick: () -> Unit, onExitClick: () -> Unit, onRankingClick: () -> Unit = {}) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Imagen de fondo a pantalla completa
@@ -54,7 +54,7 @@ fun StartScreen(onPlayClick: () -> Unit, onExitClick: () -> Unit) {
                     fontWeight = FontWeight.ExtraBold,
                     color = Color.White,
                     shadow = Shadow(
-                        color = Color(0xFF003366), // 深海蓝色阴影
+                        color = Color(0xFF003366),
                         offset = Offset(6f, 6f),
                         blurRadius = 8f
                     )
@@ -77,6 +77,27 @@ fun StartScreen(onPlayClick: () -> Unit, onExitClick: () -> Unit) {
             ) {
                 Text(
                     text = "JUGAR",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Button(
+                onClick = onRankingClick,
+                modifier = Modifier
+                    .width(220.dp)
+                    .height(65.dp),
+                shape = RoundedCornerShape(32.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFDAA520) // Goldenrod
+                ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 10.dp)
+            ) {
+                Text(
+                    text = "RANKING",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White

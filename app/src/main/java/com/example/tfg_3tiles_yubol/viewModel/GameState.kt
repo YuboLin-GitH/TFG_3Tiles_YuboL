@@ -12,5 +12,6 @@ data class GameState(
     val tileSize: Float = 55f,
     val flyingTile: Tile? = null,
     val eliminatingTiles: List<Tile> = emptyList(),
-    val isAnimating: Boolean = false
+    val isAnimating: Boolean = false,
+    val showLevelUp: Boolean = false
 )

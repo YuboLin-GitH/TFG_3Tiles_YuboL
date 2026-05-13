@@ -41,6 +41,16 @@ android {
 }
 
 dependencies {
+
+    implementation("io.github.jan-tennert.supabase:auth-kt:3.0.0")
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:3.0.0")
+    implementation("io.ktor:ktor-client-android:3.0.3")
+
+    implementation("io.ktor:ktor-client-logging:3.0.3")
+    implementation("io.ktor:ktor-client-content-negotiation:3.0.3")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.3")
+
+
     val nav_version = "2.9.6"
 
     // Jetpack Compose integration
