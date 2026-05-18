@@ -7,10 +7,10 @@ import kotlinx.serialization.Serializable
 object Login
 
 @Serializable
-object MenuInicio  // Inicio
+object MenuInicio
 
 @Serializable
-object NivelJuego  // Juego
+object NivelJuego
 
 @Serializable
 object Ranking

@@ -1,14 +1,15 @@
 package com.example.tfg_3tiles_yubol.utils
 
-
-
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.SoundPool
 import com.example.tfg_3tiles_yubol.R
+import androidx.core.content.edit
 
 class SoundManager(context: Context) {
+
+    private val prefs = context.getSharedPreferences("sound_prefs", Context.MODE_PRIVATE)
 
     private val soundPool: SoundPool = SoundPool.Builder()
         .setMaxStreams(5)
@@ -19,17 +20,16 @@ class SoundManager(context: Context) {
 
     private val clickSoundId: Int
     private val matchSoundId: Int
-    private val loadedSounds = mutableSetOf<Int>() // 记录已加载完成的音效
+    private val loadedSounds = mutableSetOf<Int>()
 
-    var sfxVolume = 1f
+    var sfxVolume = prefs.getFloat("sfx_volume", 1f)
         private set
-    var bgmVolume = 1f
+    var bgmVolume = prefs.getFloat("bgm_volume", 1f)
         private set
 
     init {
-        // 设置加载完成监听器
         soundPool.setOnLoadCompleteListener { _, sampleId, status ->
-            if (status == 0) { // 0 = 成功
+            if (status == 0) {
                 loadedSounds.add(sampleId)
             }
         }
@@ -45,7 +45,7 @@ class SoundManager(context: Context) {
     }
 
     fun playClick() {
-        if (clickSoundId in loadedSounds) { // 只有加载完才播放
+        if (clickSoundId in loadedSounds) {
             soundPool.play(clickSoundId, sfxVolume, sfxVolume, 1, 0, 1f)
         }
     }
@@ -58,10 +58,12 @@ class SoundManager(context: Context) {
 
     fun setSfxVolume(volume: Float) {
         sfxVolume = volume.coerceIn(0f, 1f)
+        prefs.edit { putFloat("sfx_volume", sfxVolume) }
     }
 
     fun setBgmVolume(volume: Float) {
         bgmVolume = volume.coerceIn(0f, 1f)
+        prefs.edit { putFloat("bgm_volume", bgmVolume) }
         mediaPlayer?.setVolume(bgmVolume, bgmVolume)
     }
 

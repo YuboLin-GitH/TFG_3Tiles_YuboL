@@ -15,9 +15,35 @@ import com.example.tfg_3tiles_yubol.viewModel.GameViewModel
 
 @Composable
 fun LoginScreen(viewModel: GameViewModel) {
-    var email by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf(viewModel.getSavedEmail()) }
     var password by remember { mutableStateOf("") }
+    var localError by remember { mutableStateOf<String?>(null) }
     val authStatus by viewModel.loginStatus.collectAsState()
+
+    fun validateFields(): Boolean {
+        if (email.isBlank() && password.isBlank()) {
+            localError = "El email y la contraseña son obligatorios"
+            return false
+        }
+        if (email.isBlank()) {
+            localError = "El email es obligatorio"
+            return false
+        }
+        if (password.isBlank()) {
+            localError = "La contraseña es obligatoria"
+            return false
+        }
+        if (!email.contains("@") || !email.contains(".")) {
+            localError = "Introduce un email válido"
+            return false
+        }
+        if (password.length < 6) {
+            localError = "La contraseña debe tener al menos 6 caracteres"
+            return false
+        }
+        localError = null
+        return true
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
@@ -30,7 +56,7 @@ fun LoginScreen(viewModel: GameViewModel) {
 
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = { email = it; localError = null },
             label = { Text("Email") },
             enabled = authStatus != AuthStatus.Loading,
             modifier = Modifier.fillMaxWidth()
@@ -40,8 +66,8 @@ fun LoginScreen(viewModel: GameViewModel) {
 
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it },
-            label = { Text("Password") },
+            onValueChange = { password = it; localError = null },
+            label = { Text("Contraseña") },
             visualTransformation = PasswordVisualTransformation(),
             enabled = authStatus != AuthStatus.Loading,
             modifier = Modifier.fillMaxWidth()
@@ -53,7 +79,11 @@ fun LoginScreen(viewModel: GameViewModel) {
             CircularProgressIndicator()
         } else {
             Button(
-                onClick = { viewModel.registrarUsuario(email, password) },
+                onClick = {
+                    if (validateFields()) {
+                        viewModel.registerUser(email, password)
+                    }
+                },
                 modifier = Modifier.fillMaxWidth().height(50.dp)
             ) {
                 Text("Registrarse")
@@ -62,17 +92,22 @@ fun LoginScreen(viewModel: GameViewModel) {
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedButton(
-                onClick = { viewModel.iniciarSesion(email, password) },
+                onClick = {
+                    if (validateFields()) {
+                        viewModel.signIn(email, password)
+                    }
+                },
                 modifier = Modifier.fillMaxWidth().height(50.dp)
             ) {
                 Text("Iniciar Sesión")
             }
         }
 
-        if (authStatus is AuthStatus.Error) {
+        val errorMessage = localError ?: (authStatus as? AuthStatus.Error)?.message
+        if (errorMessage != null) {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = (authStatus as AuthStatus.Error).message,
+                text = errorMessage,
                 color = Color.Red
             )
         }

@@ -2,7 +2,6 @@ package com.example.tfg_3tiles_yubol.ui
 
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -31,7 +30,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -41,25 +39,21 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
 import com.example.tfg_3tiles_yubol.viewModel.GameViewModel
 import com.example.tfg_3tiles_yubol.R
 import com.example.tfg_3tiles_yubol.data.model.Tile
-import kotlin.math.roundToInt
 
 @Composable
 fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackToMenu: () -> Unit = {}) {
     val state by viewModel.gameState.collectAsState()
-    val density = LocalDensity.current
 
-    var boxHeightPx by remember { mutableIntStateOf(0) }
     var showSettings by remember { mutableStateOf(false) }
     var sfxVolume by remember { mutableStateOf(1f) }
     var bgmVolume by remember { mutableStateOf(1f) }
@@ -68,14 +62,7 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
         viewModel.loadCurrentLevel()
     }
 
-    // Tray area from bottom: 16dp padding + ~48dp buttons + 8dp gap + 135dp tray
-    val trayCenterFromBottomDp = 16 + 48 + 8 + 135 / 2
-    val trayStartXDp = 16
-
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .onGloballyPositioned { boxHeightPx = it.size.height }
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
 
         Image(
             painter = painterResource(id = R.drawable.fondo),
@@ -91,11 +78,11 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "⚙",
-                fontSize = 28.sp,
-                color = Color.White,
-                modifier = Modifier.clickable { showSettings = true }
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "Ajustes",
+                tint = Color.White,
+                modifier = Modifier.size(28.dp).clickable { showSettings = true }
             )
             Text(
                 text = "Nivel ${state.currentLevel}",
@@ -103,14 +90,19 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                 color = Color.White,
                 fontWeight = FontWeight.Bold
             )
+            val minutes = state.remainingTimeSeconds / 60
+            val seconds = state.remainingTimeSeconds % 60
+            val timeText = "%02d:%02d".format(minutes, seconds)
+            val isLowTime = state.remainingTimeSeconds < 60
             Text(
-                text = "${state.score}",
+                text = timeText,
                 fontSize = 20.sp,
-                color = Color.White,
+                color = if (isLowTime) Color(0xFFFF4444) else Color.White,
                 fontWeight = FontWeight.Bold
             )
         }
 
+        // Renderizar por profundidad: z bajo primero (atrás), z alto encima (delante)
         state.tiles.sortedBy { it.z }.forEach { tile ->
             androidx.compose.runtime.key(tile.id) {
                 TileComponent(
@@ -132,11 +124,17 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.padding(bottom = 8.dp)
             ) {
-                Button(onClick = { viewModel.undoMove() }) {
-                    Text("Deshacer ")
+                Button(
+                    onClick = { viewModel.undoMove() },
+                    enabled = state.remainingUndos > 0
+                ) {
+                    Text("Deshacer (${state.remainingUndos})")
                 }
-                Button(onClick = { viewModel.shuffleTiles() }) {
-                    Text("Mezclar ")
+                Button(
+                    onClick = { viewModel.shuffleTiles() },
+                    enabled = state.remainingShuffles > 0
+                ) {
+                    Text("Mezclar (${state.remainingShuffles})")
                 }
             }
 
@@ -164,6 +162,7 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                         key = { it.id }
                     ) { tile ->
                         val isEliminating = state.eliminatingTiles.any { it.id == tile.id }
+                        // En el tray las cartas no tienen posición absoluta, se ordenan en LazyRow
                         TileComponent(
                             tile = tile.copy(x = 0f, y = 0f),
                             tileSize = state.tileSize,
@@ -173,46 +172,6 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                         )
                     }
                 }
-            }
-        }
-
-        // Flying tile overlay
-        if (state.flyingTile != null) {
-            val flyTile = state.flyingTile!!
-            val tilePx = (state.tileSize * density.density).roundToInt()
-            val startX = (flyTile.x * density.density).roundToInt()
-            val startY = (flyTile.y * density.density).roundToInt()
-
-            val trayStartX = with(density) { trayStartXDp.dp.roundToPx() }
-            val trayY = boxHeightPx - with(density) { trayCenterFromBottomDp.dp.roundToPx() }
-
-            val targetX = trayStartX + state.trayTiles.size *
-                    (tilePx + with(density) { 4.dp.roundToPx() })
-
-            val offsetAnim = remember {
-                Animatable(
-                    initialValue = IntOffset(startX, startY),
-                    typeConverter = IntOffset.VectorConverter
-                )
-            }
-
-            LaunchedEffect(flyTile.id) {
-                offsetAnim.animateTo(
-                    targetValue = IntOffset(targetX, trayY),
-                    animationSpec = tween(durationMillis = 200)
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .offset { offsetAnim.value }
-                    .size(state.tileSize.dp)
-            ) {
-                TileComponent(
-                    tile = flyTile.copy(x = 0f, y = 0f),
-                    tileSize = state.tileSize,
-                    onClick = {}
-                )
             }
         }
 
@@ -227,19 +186,38 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Text(
-                        text = " Game Over",
-                        fontSize = 36.sp,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
+                    if (state.isTimeUp) {
+                        Text(
+                            text = "⏰ ¡Tiempo agotado!",
+                            fontSize = 36.sp,
+                            color = Color(0xFFFF4444),
+                            fontWeight = FontWeight.Bold
+                        )
+                    } else {
+                        Text(
+                            text = "Fin del juego",
+                            fontSize = 36.sp,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                     Text(
                         text = "Puntuación: ${state.score}",
                         fontSize = 20.sp,
                         color = Color.White
                     )
-                    Button(onClick = { viewModel.resetGame() }) {
-                        Text("Reintentar")
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(onClick = { viewModel.resetGame() }) {
+                            Text("Reintentar")
+                        }
+                        Button(onClick = {
+                            viewModel.resetGame()
+                            onBackToMenu()
+                        }) {
+                            Text("Inicio")
+                        }
                     }
                 }
             }
@@ -269,8 +247,17 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                     }
                 },
                 confirmButton = {
-                    Button(onClick = { showSettings = false }) {
-                        Text("OK")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = {
+                            showSettings = false
+                            viewModel.resetGame()
+                            onBackToMenu()
+                        }) {
+                            Text("Inicio")
+                        }
+                        Button(onClick = { showSettings = false }) {
+                            Text("OK")
+                        }
                     }
                 }
             )
@@ -382,14 +369,12 @@ fun TileComponent(
             .alpha(alpha.value)
             .clickable(enabled = !tile.isBlocked && !isEliminating) { onClick() }
     ) {
-        // fondo de carta
         Card(
             modifier = Modifier.fillMaxSize(),
             shape = RoundedCornerShape(12.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
-            // imagen de carta
             Image(
                 painter = painterResource(id = tile.iconRes),
                 contentDescription = "Tile Icon",
@@ -400,8 +385,8 @@ fun TileComponent(
             )
         }
 
-        // si es ocultado
         if (tile.isBlocked) {
+            // Capa semitransparente sobre cartas bloqueadas
             Box(
                 modifier = Modifier
                     .fillMaxSize()

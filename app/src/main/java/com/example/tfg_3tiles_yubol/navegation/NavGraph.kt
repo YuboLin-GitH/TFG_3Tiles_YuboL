@@ -24,6 +24,7 @@ fun NavGraph(viewModel: GameViewModel) {
 
     LaunchedEffect(authStatus) {
         if (authStatus == AuthStatus.Success) {
+            // Eliminar Login de la pila: el usuario no puede volver atrás tras autenticarse
             navController.navigate(MenuInicio) {
                 popUpTo(Login) { inclusive = true }
             }
@@ -44,6 +45,7 @@ fun NavGraph(viewModel: GameViewModel) {
             val context = LocalContext.current
             StartScreen(
                 onPlayClick = {
+                    viewModel.resetGame()
                     navController.navigate(NivelJuego)
                 },
                 onExitClick = {
@@ -51,7 +53,14 @@ fun NavGraph(viewModel: GameViewModel) {
                 },
                 onRankingClick = {
                     navController.navigate(Ranking)
-                }
+                },
+                onLogout = {
+                    viewModel.logout()
+                    navController.navigate(Login) {
+                        popUpTo(MenuInicio) { inclusive = true }
+                    }
+                },
+                viewModel = viewModel
             )
         }
 

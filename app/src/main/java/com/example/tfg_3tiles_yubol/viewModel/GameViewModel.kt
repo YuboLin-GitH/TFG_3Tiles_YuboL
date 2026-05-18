@@ -12,6 +12,7 @@ import com.example.tfg_3tiles_yubol.domain.CheckMatchUseCase
 import com.example.tfg_3tiles_yubol.utils.SoundManager
 import com.example.tfg_3tiles_yubol.utils.supabase
 
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +23,7 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
 import kotlinx.serialization.Serializable
+import androidx.core.content.edit
 
 sealed class AuthStatus {
     data object Idle : AuthStatus()
@@ -34,11 +36,17 @@ sealed class AuthStatus {
 data class RankingRequest(
     val user_id: String,
     val email: String,
-    val score: Int
+    val score: Int,
+    val difficulty: String = "Normal",
+    val time_left: Int = 0
 )
 
 class GameViewModel() : ViewModel() {
 
+    private var appContext: Context? = null
+    private val loginPrefs by lazy {
+        appContext!!.getSharedPreferences("login_prefs", Context.MODE_PRIVATE)
+    }
 
      private val checkMatchUseCase = CheckMatchUseCase()
      private var checkBlockUseCase = CheckBlockUseCase(55f)
@@ -50,6 +58,8 @@ class GameViewModel() : ViewModel() {
     private val _loginStatus = MutableStateFlow<AuthStatus>(AuthStatus.Idle)
     val loginStatus: StateFlow<AuthStatus> = _loginStatus.asStateFlow()
 
+    private var timerJob: Job? = null
+
 
     fun loadTiles(tiles: List<Tile>) {
         _gameState.value = _gameState.value.copy(
@@ -57,10 +67,10 @@ class GameViewModel() : ViewModel() {
     }
 
 
-    //musica
     private var soundManager: SoundManager? = null
 
     fun initSound(context: Context) {
+        appContext = context.applicationContext
         soundManager = SoundManager(context)
         soundManager?.startBGM()
     }
@@ -78,38 +88,68 @@ class GameViewModel() : ViewModel() {
         soundManager = null
     }
 
-    //Haz clic -> Comprueba si está bloqueado -> Si no está bloqueado
-    // mueve la tarjeta de tiles a trayTiles
+    fun setDifficulty(difficulty: Difficulty) {
+        cancelTimer()
+        _gameState.value = _gameState.value.copy(
+            difficulty = difficulty,
+            remainingTimeSeconds = difficulty.timeSeconds,
+            remainingUndos = difficulty.maxUndos,
+            remainingShuffles = difficulty.maxShuffles,
+            isTimeUp = false
+        )
+    }
+
+    private fun startTimer() {
+        cancelTimer()
+        timerJob = viewModelScope.launch {
+            while (_gameState.value.remainingTimeSeconds > 0) {
+                delay(1000L)
+                val state = _gameState.value
+                // Pausar el temporizador durante game over, victoria o transición de nivel
+                if (state.isGameOver || state.isWin || state.showLevelUp) break
+                val newTime = state.remainingTimeSeconds - 1
+                if (newTime <= 0) {
+                    _gameState.value = state.copy(
+                        remainingTimeSeconds = 0,
+                        isTimeUp = true,
+                        isGameOver = true
+                    )
+                    saveScoreToSupabase()
+                    break
+                }
+                _gameState.value = state.copy(remainingTimeSeconds = newTime)
+            }
+        }
+    }
+
+    private fun cancelTimer() {
+        timerJob?.cancel()
+        timerJob = null
+    }
+
+    // Lógica principal: clic → quitar del tablero → insertar al frente del tray →
+    // detectar trío → animar eliminación (250ms) → comprobar victoria/derrota
     fun onTileClick(tile: Tile) {
         val state = _gameState.value
 
         if (tile.isBlocked || state.isGameOver || state.isAnimating) return
 
         val newTiles = state.tiles.filter { it.id != tile.id }
-
-        _gameState.value = state.copy(
-            tiles = updateBlockedState(newTiles),
-            flyingTile = tile,
-            isAnimating = true
-        )
+        val newTray = listOf(tile) + state.trayTiles
         soundManager?.playClick()
 
-        viewModelScope.launch {
-            delay(FLY_DURATION_MS)
+        val matched = checkMatchUseCase.checkMatch(newTray)
 
-            val s = _gameState.value
-            val newTray = s.trayTiles + tile
-            val matched = checkMatchUseCase.checkMatch(newTray)
+        if (matched.isNotEmpty()) {
+            _gameState.value = state.copy(
+                tiles = updateBlockedState(newTiles),
+                trayTiles = newTray,
+                eliminatingTiles = matched,
+                isAnimating = true
+            )
+            soundManager?.playMatch()
 
-            if (matched.isNotEmpty()) {
-                _gameState.value = s.copy(
-                    trayTiles = newTray,
-                    flyingTile = null,
-                    eliminatingTiles = matched,
-                    isAnimating = true
-                )
-                soundManager?.playMatch()
-
+            viewModelScope.launch {
                 delay(ELIMINATE_DURATION_MS)
 
                 val final = _gameState.value
@@ -132,40 +172,40 @@ class GameViewModel() : ViewModel() {
                         delay(1500)
                         goToNextLevel()
                     } else {
-                        guardarPuntuacionEnSupabase(newScore)
+                        saveScoreToSupabase()
                     }
                 }
-            } else {
-                val finalTiles = updateBlockedState(s.tiles)
-                val won = finalTiles.isEmpty() && newTray.isEmpty()
-                _gameState.value = s.copy(
-                    tiles = finalTiles,
-                    trayTiles = newTray,
-                    flyingTile = null,
-                    isGameOver = newTray.size >= 7,
-                    isWin = won && currentLevel != 1,
-                    isAnimating = false
-                )
-                if (won) {
-                    if (currentLevel == 1) {
-                        _gameState.value = _gameState.value.copy(showLevelUp = true)
+            }
+        } else {
+            val finalTiles = updateBlockedState(newTiles)
+            val won = finalTiles.isEmpty() && newTray.isEmpty()
+            _gameState.value = state.copy(
+                tiles = finalTiles,
+                trayTiles = newTray,
+                isGameOver = newTray.size >= 7,
+                isWin = won && currentLevel != 1,
+                isAnimating = false
+            )
+            if (won) {
+                if (currentLevel == 1) {
+                    _gameState.value = _gameState.value.copy(showLevelUp = true)
+                    viewModelScope.launch {
                         delay(1500)
                         goToNextLevel()
-                    } else {
-                        guardarPuntuacionEnSupabase(s.score)
                     }
+                } else {
+                    saveScoreToSupabase()
                 }
             }
         }
     }
 
     companion object {
-        private const val FLY_DURATION_MS = 200L
         private const val ELIMINATE_DURATION_MS = 250L
     }
 
 
-    // para actualizar el estado de ocultación de la tarjeta
+    // Recalcula isBlocked para todas las cartas tras cada movimiento
     private fun updateBlockedState(tiles: List<Tile>): List<Tile> {
         return tiles.map { tile ->
             tile.copy(isBlocked = checkBlockUseCase.isBlocked(tile, tiles))
@@ -175,15 +215,31 @@ class GameViewModel() : ViewModel() {
 
 
 
+    // Avanza al siguiente nivel conservando puntuación, dificultad, tiempo y ayudas restantes
     fun goToNextLevel() {
-        val previousScore = _gameState.value.score
+        val state = _gameState.value
         currentLevel++
-        _gameState.value = GameState(currentLevel = currentLevel, score = previousScore)
+        _gameState.value = GameState(
+            currentLevel = currentLevel,
+            score = state.score,
+            difficulty = state.difficulty,
+            remainingTimeSeconds = state.remainingTimeSeconds,
+            remainingUndos = state.remainingUndos,
+            remainingShuffles = state.remainingShuffles
+        )
         loadCurrentLevel()
     }
     fun resetGame() {
+        cancelTimer()
         currentLevel = 1
-        _gameState.value = GameState(currentLevel = 1)
+        val diff = _gameState.value.difficulty
+        _gameState.value = GameState(
+            currentLevel = 1,
+            difficulty = diff,
+            remainingTimeSeconds = diff.timeSeconds,
+            remainingUndos = diff.maxUndos,
+            remainingShuffles = diff.maxShuffles
+        )
         loadCurrentLevel()
     }
 
@@ -195,6 +251,7 @@ class GameViewModel() : ViewModel() {
             else -> com.example.tfg_3tiles_yubol.data.local.LevelData.getLevel1()
         }
         loadLevel(level)
+        startTimer()
     }
 
     fun loadLevel(level: Level) {
@@ -212,28 +269,25 @@ class GameViewModel() : ViewModel() {
         soundManager?.setBgmVolume(volume)
     }
 
-    // Deshacer
     fun undoMove() {
         val state = _gameState.value
         if (state.isAnimating || state.trayTiles.isEmpty()) return
-        // si hay carta es vuelve atras
-        if (state.trayTiles.isNotEmpty()) {
-            val lastTile = state.trayTiles.last() // ultimo carta
-            val newTray = state.trayTiles.dropLast(1) // quitar ultimo carta
-            val newTiles = state.tiles + lastTile // este carta vuelve al pantalla de juego
+        if (state.remainingUndos <= 0) return
+        val lastTile = state.trayTiles.last()
+        val newTray = state.trayTiles.dropLast(1)
+        val newTiles = state.tiles + lastTile
 
-            _gameState.value = state.copy(
-                tiles = updateBlockedState(newTiles),
-                trayTiles = newTray,
-                isGameOver = false
-            )
-        }
+        _gameState.value = state.copy(
+            tiles = updateBlockedState(newTiles),
+            trayTiles = newTray,
+            isGameOver = false,
+            remainingUndos = state.remainingUndos - 1
+        )
     }
 
-    // Mezclar
     fun shuffleTiles() {
         val state = _gameState.value
-        if (state.isAnimating) return
+        if (state.isAnimating || state.remainingShuffles <= 0) return
         val currentTiles = state.tiles
 
         val shuffledTypes = currentTiles.map { it.type }.shuffled()
@@ -247,37 +301,125 @@ class GameViewModel() : ViewModel() {
         }
 
         _gameState.value = state.copy(
-            tiles = shuffledTiles
+            tiles = shuffledTiles,
+            remainingShuffles = state.remainingShuffles - 1
         )
     }
 
-    fun registrarUsuario(correo: String, contrasena: String) {
+    fun tryAutoLogin() {
+        val wasLoggedIn = loginPrefs.getBoolean("was_logged_in", false)
+        if (!wasLoggedIn) return
+
         viewModelScope.launch {
-            _loginStatus.value = AuthStatus.Loading
             try {
-                supabase.auth.signUpWith(Email) {
-                    email = correo
-                    password = contrasena
+                var user = supabase.auth.currentUserOrNull()
+                if (user != null) {
+                    _loginStatus.value = AuthStatus.Success
+                    return@launch
                 }
-                _loginStatus.value = AuthStatus.Success
-            } catch (e: Exception) {
-                _loginStatus.value = AuthStatus.Error(e.message ?: "Error desconocido")
+                // Reintentar: la sesión de Supabase puede tardar en cargar desde SharedPreferences
+                repeat(5) {
+                    delay(500)
+                    user = supabase.auth.currentUserOrNull()
+                    if (user != null) {
+                        _loginStatus.value = AuthStatus.Success
+                        return@launch
+                    }
+                }
+                loginPrefs.edit { putBoolean("was_logged_in", false) }
+            } catch (_: Exception) {
+                loginPrefs.edit { putBoolean("was_logged_in", false) }
             }
         }
     }
 
-    fun iniciarSesion(correo: String, contrasena: String) {
+    fun getSavedEmail(): String = loginPrefs.getString("email", "") ?: ""
+
+    fun registerUser(email: String, password: String) {
+        viewModelScope.launch {
+            _loginStatus.value = AuthStatus.Loading
+            try {
+                supabase.auth.signUpWith(Email) {
+                    this.email = email
+                    this.password = password
+                }
+                _loginStatus.value = AuthStatus.Success
+                loginPrefs.edit {
+                    putBoolean("was_logged_in", true)
+                    putString("email", email)
+                }
+            } catch (e: Exception) {
+                _loginStatus.value = AuthStatus.Error(translateError(e.message))
+            }
+        }
+    }
+
+    fun signIn(email: String, password: String) {
         viewModelScope.launch {
             _loginStatus.value = AuthStatus.Loading
             try {
                 supabase.auth.signInWith(Email) {
-                    email = correo
-                    password = contrasena
+                    this.email = email
+                    this.password = password
                 }
                 _loginStatus.value = AuthStatus.Success
+                loginPrefs.edit {
+                    putBoolean("was_logged_in", true)
+                    putString("email", email)
+                }
             } catch (e: Exception) {
-                _loginStatus.value = AuthStatus.Error(e.message ?: "Error desconocido")
+                _loginStatus.value = AuthStatus.Error(translateError(e.message))
             }
+        }
+    }
+
+    private fun translateError(message: String?): String {
+        val texto = message ?: return "Error desconocido"
+        return when {
+            texto.contains("Invalid login credentials", ignoreCase = true) ->
+                "Credenciales inválidas"
+            texto.contains("User already registered", ignoreCase = true) ||
+            texto.contains("already exists", ignoreCase = true) ||
+            texto.contains("already been registered", ignoreCase = true) ||
+            texto.contains("already registered", ignoreCase = true) ->
+                "El usuario ya está registrado"
+            texto.contains("Email not confirmed", ignoreCase = true) ||
+            texto.contains("not confirmed", ignoreCase = true) ->
+                "Email no confirmado. Revisa tu bandeja de entrada"
+            texto.contains("invalid format", ignoreCase = true) ||
+            texto.contains("Unable to validate email", ignoreCase = true) ||
+            texto.contains("valid email", ignoreCase = true) ||
+            texto.contains("invalid email", ignoreCase = true) ->
+                "Formato de email inválido"
+            texto.contains("Password should be at least", ignoreCase = true) ||
+            texto.contains("Password is too short", ignoreCase = true) ||
+            texto.contains("at least 6 characters", ignoreCase = true) ||
+            texto.contains("too short", ignoreCase = true) ->
+                "La contraseña debe tener al menos 6 caracteres"
+            texto.contains("Email rate limit", ignoreCase = true) ||
+            texto.contains("rate limit", ignoreCase = true) ||
+            texto.contains("too many requests", ignoreCase = true) ->
+                "Demasiados intentos. Espera un momento"
+            texto.contains("User not found", ignoreCase = true) ||
+            texto.contains("not found", ignoreCase = true) ->
+                "Usuario no encontrado"
+            texto.contains("Password is required", ignoreCase = true) ||
+            texto.contains("password is required", ignoreCase = true) ||
+            texto.contains("requires a valid password", ignoreCase = true) ||
+            texto.contains("Signup requires a valid password", ignoreCase = true) ||
+            texto.contains("valid password", ignoreCase = true) ->
+                "La contraseña es obligatoria"
+            texto.contains("Email is required", ignoreCase = true) ||
+            texto.contains("email is required", ignoreCase = true) ||
+            texto.contains("An email", ignoreCase = true) ||
+            texto.contains("email address", ignoreCase = true) ->
+                "El email es obligatorio"
+            texto.contains("Password should be", ignoreCase = true) ||
+            texto.contains("password should", ignoreCase = true) ||
+            texto.contains("weak password", ignoreCase = true) ||
+            texto.contains("not strong enough", ignoreCase = true) ->
+                "La contraseña no es lo suficientemente segura"
+            else -> texto
         }
     }
 
@@ -285,12 +427,28 @@ class GameViewModel() : ViewModel() {
         _loginStatus.value = AuthStatus.Idle
     }
 
+    fun logout() {
+        cancelTimer()
+        loginPrefs.edit { clear() }
+        viewModelScope.launch {
+            try {
+                supabase.auth.signOut()
+                _loginStatus.value = AuthStatus.Idle
+                resetGame()
+            } catch (e: Exception) {
+                println("Error al cerrar sesión: ${e.message}")
+            }
+        }
+    }
+
     @Serializable
     data class RankingRecord(
         val id: Int = 0,
         val user_id: String = "",
         val email: String = "",
-        val score: Int = 0
+        val score: Int = 0,
+        val difficulty: String = "Normal",
+        val time_left: Int = 0
     )
 
     private val _rankings = MutableStateFlow<List<RankingRecord>>(emptyList())
@@ -301,14 +459,19 @@ class GameViewModel() : ViewModel() {
             try {
                 val data = supabase.from("rankings").select()
                     .decodeList<RankingRecord>()
-                _rankings.value = data.sortedByDescending { it.score }
+                // Cada usuario tiene una entrada por dificultad (mejor puntuación en cada una)
+                _rankings.value = data
+                    .groupBy { it.user_id to it.difficulty }
+                    .map { (_, records) -> records.maxBy { it.score } }
+                    .sortedByDescending { it.score }
             } catch (e: Exception) {
                 println("Error fetch rankings: ${e.message}")
             }
         }
     }
 
-    fun guardarPuntuacionEnSupabase(puntos: Int) {
+    fun saveScoreToSupabase() {
+        val state = _gameState.value
         viewModelScope.launch {
             try {
                 val usuarioActual = supabase.auth.currentUserOrNull()
@@ -316,10 +479,12 @@ class GameViewModel() : ViewModel() {
                     val registro = RankingRequest(
                         user_id = usuarioActual.id,
                         email = usuarioActual.email ?: "Anónimo",
-                        score = puntos
+                        score = state.score,
+                        difficulty = state.difficulty.label,
+                        time_left = state.remainingTimeSeconds
                     )
                     supabase.from("rankings").insert(registro)
-                    println("Puntuacion guardada: $puntos")
+                    println("Puntuacion guardada: ${state.score}, dificultad: ${state.difficulty.label}")
                 } else {
                     println("No hay usuario autenticado")
                 }
@@ -330,4 +495,3 @@ class GameViewModel() : ViewModel() {
     }
 
 }
-

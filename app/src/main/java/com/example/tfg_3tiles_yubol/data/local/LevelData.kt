@@ -8,9 +8,9 @@ object LevelData {
     fun getLevel1(): Level {
         val tileSize = 55f
         val spacing = 18f
-        val layerOffset = 35f
-        val startX = 45f
-        val startY = 130f
+        val layerOffset = 27.5f  // medio tile, consistente con nivel 2
+        val startX = 62f
+        val startY = 220f
 
         val allTypes = mutableListOf<Int>().apply {
             for (type in 1..3) {
@@ -58,59 +58,52 @@ object LevelData {
         var typeIndex = 0
         val tiles = mutableListOf<Tile>()
 
-        //
+        // Diseño simétrico de 105 cartas centrado en X = 197.5f
         val layers = listOf(
-            // Cuerpo principal
-            LayerConfig(z = 1, startX = 50f, startY = 150f, cols = 5, rows = 5), //  25
-            LayerConfig(z = 2, startX = 80f, startY = 180f, cols = 4, rows = 4), //  16
-            LayerConfig(z = 3, startX = 110f, startY = 210f, cols = 3, rows = 3), // 9
-            LayerConfig(z = 4, startX = 140f, startY = 240f, cols = 2, rows = 2), // 4
-            LayerConfig(z = 5, startX = 170f, startY = 270f, cols = 1, rows = 1), // 1
+            // --- CUERPO (pirámide central) Z: 3-7 (55 cartas) ---
+            LayerConfig(z = 3, startX = 60f,    startY = 200f,   cols = 5, rows = 5),
+            LayerConfig(z = 4, startX = 87.5f,  startY = 227.5f, cols = 4, rows = 4),
+            LayerConfig(z = 5, startX = 115f,   startY = 255f,   cols = 3, rows = 3),
+            LayerConfig(z = 6, startX = 142.5f, startY = 282.5f, cols = 2, rows = 2),
+            LayerConfig(z = 7, startX = 170f,   startY = 310f,   cols = 1, rows = 1),
 
-            // Cabeza
-            LayerConfig(z = 1, startX = 50f, startY = 80f, cols = 5, rows = 2),  // 10
-            LayerConfig(z = 2, startX = 95f, startY = 80f, cols = 4, rows = 2), // 8
+            // --- CABEZA Z: 8-10 (14 cartas) ---
+            LayerConfig(z = 8, startX = 115f,   startY = 90f,    cols = 3, rows = 3),
+            LayerConfig(z = 9, startX = 142.5f, startY = 117.5f, cols = 2, rows = 2),
+            LayerConfig(z = 10, startX = 170f,  startY = 145f,   cols = 1, rows = 1),
 
+            // --- PIERNA IZQUIERDA Z: 1-2 (10 cartas) ---
+            LayerConfig(z = 1, startX = 60f,  startY = 470f,   cols = 2, rows = 3),
+            LayerConfig(z = 2, startX = 60f,  startY = 497.5f, cols = 2, rows = 2),
+            // --- PIERNA DERECHA Z: 1-2 (10 cartas) ---
+            LayerConfig(z = 1, startX = 225f, startY = 470f,   cols = 2, rows = 3),
+            LayerConfig(z = 2, startX = 225f, startY = 497.5f, cols = 2, rows = 2),
 
-            // pierna izquierda
-            LayerConfig(z = 1, startX = 50f, startY = 450f, cols = 2, rows = 3), // 6
-            LayerConfig(z = 2, startX = 50f, startY = 450f, cols = 2, rows = 2), // 4
-            // Pierna derecha
-            LayerConfig(z = 1, startX = 230f, startY = 450f, cols = 2, rows = 3), // 6
-            LayerConfig(z = 2, startX = 230f, startY = 450f, cols = 2, rows = 2), // 4
+            // --- COLA (relleno entre piernas) Z: 1-2 (6 cartas) ---
+            LayerConfig(z = 1, startX = 170f, startY = 470f, cols = 1, rows = 3),
+            LayerConfig(z = 2, startX = 170f, startY = 470f, cols = 1, rows = 3),
 
-
-            // Hombros prominentes a ambos lados
-            LayerConfig(z = 2, startX = 20f, startY = 150f, cols = 1, rows = 2), // 2
-            LayerConfig(z = 2, startX = 320f, startY = 150f, cols = 1, rows = 2), // 2
-            // La carta en los piernas
-            LayerConfig(z = 3, startX = 80f, startY = 480f, cols = 1, rows = 2), // 2
-            LayerConfig(z = 3, startX = 260f, startY = 480f, cols = 1, rows = 2), // 2
-            // oculta en lo profundo del centro.
-            LayerConfig(z = 6, startX = 170f, startY = 150f, cols = 1, rows = 4), // 4
+            // --- HOMBROS Z: 8-9 (10 cartas) ---
+            LayerConfig(z = 8,  startX = 32.5f,  startY = 255f,   cols = 1, rows = 3),
+            LayerConfig(z = 8,  startX = 307.5f, startY = 255f,   cols = 1, rows = 3),
+            LayerConfig(z = 9,  startX = 32.5f,  startY = 282.5f, cols = 1, rows = 2),
+            LayerConfig(z = 9,  startX = 307.5f, startY = 282.5f, cols = 1, rows = 2)
         )
 
-
         for (layer in layers) {
-            // Llamaremos al bucle exterior "outer" para poder salir de él fácilmente más adelante.
             outer@ for (row in 0 until layer.rows) {
                 for (col in 0 until layer.cols) {
-                    if (typeIndex >= allTypes.size) break@outer  // Salir de dos bucles anidados
+                    if (typeIndex >= allTypes.size) break@outer
 
-                    // significa desplazarse una posición a la derecha después de tomar el siguiente tipo.
                     val type = allTypes[typeIndex++]
-                    // si falla coge cangrejo
                     val fallbackIcon = com.example.tfg_3tiles_yubol.R.drawable.cangrejo
-                    // buscar icono de cartas
                     val iconResId = TileIconMap.icons[type] ?: fallbackIcon
-                    // Cuanto más alta sea la capa, más se desplazan ligeramente las cartas.
-                    val zOffset = (layer.z - 1) * 4f
                     tiles.add(
                         Tile(
                             id = id++,
                             type = type,
-                            x = layer.startX + col * tileSize + zOffset,
-                            y = layer.startY + row * tileSize + zOffset,
+                            x = layer.startX + col * tileSize,
+                            y = layer.startY + row * tileSize,
                             z = layer.z,
                             iconRes = iconResId
                         )

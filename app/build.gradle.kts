@@ -44,6 +44,7 @@ dependencies {
 
     implementation("io.github.jan-tennert.supabase:auth-kt:3.0.0")
     implementation("io.github.jan-tennert.supabase:postgrest-kt:3.0.0")
+    implementation("com.russhwolf:multiplatform-settings-no-arg:1.2.0")
     implementation("io.ktor:ktor-client-android:3.0.3")
 
     implementation("io.ktor:ktor-client-logging:3.0.3")

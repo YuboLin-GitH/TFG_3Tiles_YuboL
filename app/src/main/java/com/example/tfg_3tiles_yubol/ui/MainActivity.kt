@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.material3.MaterialTheme
 import com.example.tfg_3tiles_yubol.navegation.NavGraph
+import com.example.tfg_3tiles_yubol.utils.initSupabase
 import com.example.tfg_3tiles_yubol.viewModel.GameViewModel
 
 
@@ -16,7 +17,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        initSupabase()
         viewModel.initSound(this)
+        viewModel.tryAutoLogin()
         setContent {
             MaterialTheme {
 
