@@ -271,10 +271,10 @@ class GameViewModel() : ViewModel() {
 
     fun undoMove() {
         val state = _gameState.value
-        if (state.isAnimating || state.trayTiles.isEmpty()) return
+        if (state.isAnimating || state.isGameOver || state.showLevelUp || state.trayTiles.isEmpty()) return
         if (state.remainingUndos <= 0) return
-        val lastTile = state.trayTiles.last()
-        val newTray = state.trayTiles.dropLast(1)
+        val lastTile = state.trayTiles.first()
+        val newTray = state.trayTiles.drop(1)
         val newTiles = state.tiles + lastTile
 
         _gameState.value = state.copy(
@@ -287,7 +287,7 @@ class GameViewModel() : ViewModel() {
 
     fun shuffleTiles() {
         val state = _gameState.value
-        if (state.isAnimating || state.remainingShuffles <= 0) return
+        if (state.isAnimating || state.isGameOver || state.showLevelUp || state.remainingShuffles <= 0) return
         val currentTiles = state.tiles
 
         val shuffledTypes = currentTiles.map { it.type }.shuffled()
@@ -463,7 +463,8 @@ class GameViewModel() : ViewModel() {
                 _rankings.value = data
                     .groupBy { it.user_id to it.difficulty }
                     .map { (_, records) -> records.maxBy { it.score } }
-                    .sortedByDescending { it.score }
+                    .sortedWith(compareByDescending<RankingRecord> { it.score }
+                        .thenByDescending { it.time_left })
             } catch (e: Exception) {
                 println("Error fetch rankings: ${e.message}")
             }

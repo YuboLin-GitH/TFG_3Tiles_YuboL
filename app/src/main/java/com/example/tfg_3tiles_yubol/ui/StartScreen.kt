@@ -4,7 +4,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -17,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -31,11 +34,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.Icon
+
 import com.example.tfg_3tiles_yubol.R
 import com.example.tfg_3tiles_yubol.viewModel.Difficulty
 import com.example.tfg_3tiles_yubol.viewModel.GameViewModel
@@ -48,10 +47,10 @@ fun StartScreen(
     onLogout: () -> Unit = {},
     viewModel: GameViewModel
 ) {
-    var showMenu by remember { mutableStateOf(false) }
+    var showConfig by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
-    var sfxVolume by remember { mutableStateOf(viewModel.getSfxVolume()) }
-    var bgmVolume by remember { mutableStateOf(viewModel.getBgmVolume()) }
+    var sfxVolume by remember { mutableFloatStateOf(viewModel.getSfxVolume()) }
+    var bgmVolume by remember { mutableFloatStateOf(viewModel.getBgmVolume()) }
     val gameState by viewModel.gameState.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -62,45 +61,132 @@ fun StartScreen(
             contentScale = ContentScale.Crop
         )
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 40.dp, start = 16.dp),
-            contentAlignment = Alignment.TopStart
+        // Contenido principal
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Box(
+            Image(
+                painter = painterResource(id = R.drawable.cangrejo),
+                contentDescription = "Mascota",
                 modifier = Modifier
-                    .size(40.dp)
-                    .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
-                    .clickable { showMenu = true },
-                contentAlignment = Alignment.Center
+                    .size(120.dp)
+                    .padding(bottom = 16.dp)
+            )
+
+            Text(
+                text = "Océano Match",
+                style = TextStyle(
+                    fontSize = 52.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
+                    shadow = Shadow(
+                        color = Color(0xFF003366),
+                        offset = Offset(6f, 6f),
+                        blurRadius = 8f
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(70.dp))
+
+            Button(
+                onClick = onPlayClick,
+                modifier = Modifier
+                    .width(220.dp)
+                    .height(65.dp),
+                shape = RoundedCornerShape(32.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFF7F50)
+                ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 10.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Menu,
-                    contentDescription = "Menú",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
+                Text(
+                    text = "JUGAR",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Button(
+                onClick = onRankingClick,
+                modifier = Modifier
+                    .width(220.dp)
+                    .height(65.dp),
+                shape = RoundedCornerShape(32.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFDAA520)
+                ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 10.dp)
+            ) {
+                Text(
+                    text = "RANKING",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Button(
+                onClick = { showConfig = true },
+                modifier = Modifier
+                    .width(220.dp)
+                    .height(65.dp),
+                shape = RoundedCornerShape(32.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF2E8B57)
+                ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
+            ) {
+                Text(
+                    text = "CONFIGURACIÓN",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Button(
+                onClick = onExitClick,
+                modifier = Modifier
+                    .width(220.dp)
+                    .height(65.dp),
+                shape = RoundedCornerShape(32.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF00509E)
+                ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
+            ) {
+                Text(
+                    text = "SALIR",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
                 )
             }
         }
 
-        // Menú hamburguesa
-        if (showMenu) {
+        // ── Diálogo de configuración ──
+        if (showConfig) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.5f))
-                    .clickable { showMenu = false }
+                    .clickable { showConfig = false }
             )
             Card(
                 modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(0.75f)
-                    .align(Alignment.CenterStart),
-                shape = RoundedCornerShape(
-                    topEnd = 20.dp,
-                    bottomEnd = 20.dp
-                ),
+                    .fillMaxWidth(0.88f)
+                    .align(Alignment.Center),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = Color(0xFF0D1B2A)
                 )
@@ -108,12 +194,13 @@ fun StartScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
                         .padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "Menú",
-                        fontSize = 26.sp,
+                        text = "Configuración",
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
@@ -162,46 +249,35 @@ fun StartScreen(
                         color = Color.White
                     )
                     Difficulty.entries.forEach { diff ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                        Column(
                             modifier = Modifier.clickable {
                                 viewModel.setDifficulty(diff)
                             }
                         ) {
-                            RadioButton(
-                                selected = gameState.difficulty == diff,
-                                onClick = { viewModel.setDifficulty(diff) }
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                RadioButton(
+                                    selected = gameState.difficulty == diff,
+                                    onClick = { viewModel.setDifficulty(diff) }
+                                )
+                                Text(
+                                    text = "${diff.label} — ${diff.timeSeconds / 60} min",
+                                    fontSize = 14.sp,
+                                    color = Color.White
+                                )
+                            }
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(start = 4.dp)
+                                modifier = Modifier.padding(start = 34.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Text(
-                                    text = "${diff.label} — ${diff.timeSeconds / 60} min  |  ",
-                                    fontSize = 14.sp,
-                                    color = Color.White
-                                )
-                                Icon(
-                                    imageVector = Icons.Default.Refresh,
-                                    contentDescription = "Deshacer",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(14.dp)
+                                    text = "Deshacer: ${diff.maxUndos}",
+                                    fontSize = 12.sp,
+                                    color = Color.White.copy(alpha = 0.7f)
                                 )
                                 Text(
-                                    text = " ${diff.maxUndos}   ",
-                                    fontSize = 14.sp,
-                                    color = Color.White
-                                )
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowUp,
-                                    contentDescription = "Mezclar",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Text(
-                                    text = " ${diff.maxShuffles}",
-                                    fontSize = 14.sp,
-                                    color = Color.White
+                                    text = "Mezclar: ${diff.maxShuffles}",
+                                    fontSize = 12.sp,
+                                    color = Color.White.copy(alpha = 0.7f)
                                 )
                             }
                         }
@@ -209,23 +285,42 @@ fun StartScreen(
 
                     HorizontalDivider(color = Color.White.copy(alpha = 0.3f))
 
-                    // ── Cerrar sesión ──
-                    Button(
-                        onClick = {
-                            showMenu = false
-                            showLogoutDialog = true
-                        },
+                    // ── Botones ──
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFCC3333)
-                        )
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text(
-                            text = "Cerrar sesión",
-                            fontSize = 16.sp,
-                            color = Color.White
-                        )
+                        Button(
+                            onClick = { showConfig = false },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF2E8B57)
+                            )
+                        ) {
+                            Text(
+                                text = "Cerrar",
+                                fontSize = 14.sp,
+                                color = Color.White
+                            )
+                        }
+                        Button(
+                            onClick = {
+                                showConfig = false
+                                showLogoutDialog = true
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFCC3333)
+                            )
+                        ) {
+                            Text(
+                                text = "Cerrar sesión",
+                                fontSize = 14.sp,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
             }
@@ -254,99 +349,5 @@ fun StartScreen(
                 }
             )
         }
-
-        // Contenido principal (oculto cuando el menú está abierto)
-        if (!showMenu) {
-            Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.cangrejo),
-                contentDescription = "Mascota",
-                modifier = Modifier
-                    .size(120.dp)
-                    .padding(bottom = 16.dp)
-            )
-
-            Text(
-                text = "Océano Match",
-                style = TextStyle(
-                    fontSize = 52.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White,
-                    shadow = Shadow(
-                        color = Color(0xFF003366),
-                        offset = Offset(6f, 6f),
-                        blurRadius = 8f
-                    )
-                )
-            )
-
-            Spacer(modifier = Modifier.height(70.dp))
-
-            Button(
-                onClick = onPlayClick,
-                modifier = Modifier
-                    .width(220.dp)
-                    .height(65.dp),
-                shape = RoundedCornerShape(32.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFF7F50) // Coral Orange
-                ),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 10.dp)
-            ) {
-                Text(
-                    text = "JUGAR",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Button(
-                onClick = onRankingClick,
-                modifier = Modifier
-                    .width(220.dp)
-                    .height(65.dp),
-                shape = RoundedCornerShape(32.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFDAA520) // Goldenrod
-                ),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 10.dp)
-            ) {
-                Text(
-                    text = "RANKING",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Button(
-                onClick = onExitClick,
-                modifier = Modifier
-                    .width(220.dp)
-                    .height(65.dp),
-                shape = RoundedCornerShape(32.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF00509E) // Deep Sea Blue
-                ),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
-            ) {
-                Text(
-                    text = "SALIR",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-        }
-    }
     }
 }
