@@ -15,7 +15,7 @@ import com.example.tfg_3tiles_yubol.viewModel.GameViewModel
 
 @Composable
 fun LoginScreen(viewModel: GameViewModel) {
-    var email by remember { mutableStateOf(viewModel.getSavedEmail()) }
+    var email by remember { mutableStateOf(viewModel.obtenerEmailGuardado()) }
     var password by remember { mutableStateOf("") }
     var localError by remember { mutableStateOf<String?>(null) }
     val authStatus by viewModel.loginStatus.collectAsState()
@@ -81,7 +81,7 @@ fun LoginScreen(viewModel: GameViewModel) {
             Button(
                 onClick = {
                     if (validateFields()) {
-                        viewModel.registerUser(email, password)
+                        viewModel.registrarUsuario(email, password)
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp)
@@ -94,7 +94,7 @@ fun LoginScreen(viewModel: GameViewModel) {
             OutlinedButton(
                 onClick = {
                     if (validateFields()) {
-                        viewModel.signIn(email, password)
+                        viewModel.iniciarSesion(email, password)
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp)

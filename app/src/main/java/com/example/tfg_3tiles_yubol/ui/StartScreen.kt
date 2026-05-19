@@ -49,8 +49,8 @@ fun StartScreen(
 ) {
     var showConfig by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
-    var sfxVolume by remember { mutableFloatStateOf(viewModel.getSfxVolume()) }
-    var bgmVolume by remember { mutableFloatStateOf(viewModel.getBgmVolume()) }
+    var sfxVolume by remember { mutableFloatStateOf(viewModel.obtenerVolumenEfectos()) }
+    var bgmVolume by remember { mutableFloatStateOf(viewModel.obtenerVolumenMusica()) }
     val gameState by viewModel.gameState.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -145,8 +145,8 @@ fun StartScreen(
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
             ) {
                 Text(
-                    text = "CONFIGURACIÓN",
-                    fontSize = 22.sp,
+                    text = "AJUSTES",
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
@@ -223,7 +223,7 @@ fun StartScreen(
                         value = sfxVolume,
                         onValueChange = {
                             sfxVolume = it
-                            viewModel.setSfxVolume(it)
+                            viewModel.cambiarVolumenEfectos(it)
                         }
                     )
                     Text(
@@ -235,7 +235,7 @@ fun StartScreen(
                         value = bgmVolume,
                         onValueChange = {
                             bgmVolume = it
-                            viewModel.setBgmVolume(it)
+                            viewModel.cambiarVolumenMusica(it)
                         }
                     )
 
@@ -251,35 +251,27 @@ fun StartScreen(
                     Difficulty.entries.forEach { diff ->
                         Column(
                             modifier = Modifier.clickable {
-                                viewModel.setDifficulty(diff)
+                                viewModel.cambiarDificultad(diff)
                             }
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 RadioButton(
-                                    selected = gameState.difficulty == diff,
-                                    onClick = { viewModel.setDifficulty(diff) }
+                                    selected = gameState.dificultad == diff,
+                                    onClick = { viewModel.cambiarDificultad(diff) }
                                 )
                                 Text(
-                                    text = "${diff.label} — ${diff.timeSeconds / 60} min",
+                                    text = "${diff.etiqueta} — ${diff.tiempoSegundos / 60} min",
                                     fontSize = 14.sp,
                                     color = Color.White
                                 )
                             }
-                            Row(
-                                modifier = Modifier.padding(start = 34.dp),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = "Deshacer: ${diff.maxUndos}",
-                                    fontSize = 12.sp,
-                                    color = Color.White.copy(alpha = 0.7f)
-                                )
-                                Text(
-                                    text = "Mezclar: ${diff.maxShuffles}",
-                                    fontSize = 12.sp,
-                                    color = Color.White.copy(alpha = 0.7f)
-                                )
-                            }
+                            Text(
+                                text = "Deshacer: ${diff.maxDeshacer}   Mezclar: ${diff.maxMezclas}",
+                                fontSize = 12.sp,
+                                color = Color.White.copy(alpha = 0.7f),
+                                maxLines = 1,
+                                modifier = Modifier.padding(start = 34.dp)
+                            )
                         }
                     }
 

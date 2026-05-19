@@ -24,7 +24,7 @@ fun RankingScreen(viewModel: GameViewModel, onBack: () -> Unit) {
     val filters = listOf("Todos", "Fácil", "Normal", "Difícil")
 
     LaunchedEffect(Unit) {
-        viewModel.fetchRankings()
+        viewModel.cargarRankings()
     }
 
     val filteredRankings = if (selectedFilter == "Todos") {

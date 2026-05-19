@@ -18,8 +18,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         initSupabase()
-        viewModel.initSound(this)
-        viewModel.tryAutoLogin()
+        viewModel.iniciarSonido(this)
+        viewModel.intentarAutoLogin()
         setContent {
             MaterialTheme {
 
@@ -31,16 +31,16 @@ class MainActivity : ComponentActivity() {
     }
     override fun onResume() {
         super.onResume()
-        viewModel.resumeMusic()
+        viewModel.reanudarMusica()
     }
 
     override fun onPause() {
         super.onPause()
-        viewModel.pauseMusic()
+        viewModel.pausarMusica()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        viewModel.releaseMusic()
+        viewModel.liberarMusica()
     }
 }

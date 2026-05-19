@@ -28,7 +28,7 @@ fun NavGraph(viewModel: GameViewModel) {
             navController.navigate(MenuInicio) {
                 popUpTo(Login) { inclusive = true }
             }
-            viewModel.resetAuthStatus()
+            viewModel.limpiarEstadoAuth()
         }
     }
 
@@ -45,7 +45,7 @@ fun NavGraph(viewModel: GameViewModel) {
             val context = LocalContext.current
             StartScreen(
                 onPlayClick = {
-                    viewModel.resetGame()
+                    viewModel.reiniciarJuego()
                     navController.navigate(NivelJuego)
                 },
                 onExitClick = {
@@ -55,7 +55,7 @@ fun NavGraph(viewModel: GameViewModel) {
                     navController.navigate(Ranking)
                 },
                 onLogout = {
-                    viewModel.logout()
+                    viewModel.cerrarSesion()
                     navController.navigate(Login) {
                         popUpTo(MenuInicio) { inclusive = true }
                     }

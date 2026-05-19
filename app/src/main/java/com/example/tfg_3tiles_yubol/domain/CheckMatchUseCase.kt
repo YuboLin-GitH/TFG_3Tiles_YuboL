@@ -4,8 +4,8 @@ import com.example.tfg_3tiles_yubol.data.model.Tile
 
 class CheckMatchUseCase {
 
-    fun checkMatch(tray: List<Tile>): List<Tile> {
-        return tray.groupBy { it.type }
+    fun buscarTrios(tray: List<Tile>): List<Tile> {
+        return tray.groupBy { it.tipo }
             .values
             .filter { it.size >= 3 }
             .flatten()

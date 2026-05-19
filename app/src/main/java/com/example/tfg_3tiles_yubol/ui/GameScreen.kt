@@ -56,11 +56,11 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
     val state by viewModel.gameState.collectAsState()
 
     var showSettings by remember { mutableStateOf(false) }
-    var sfxVolume by remember { mutableFloatStateOf(viewModel.getSfxVolume()) }
-    var bgmVolume by remember { mutableFloatStateOf(viewModel.getBgmVolume()) }
+    var sfxVolume by remember { mutableFloatStateOf(viewModel.obtenerVolumenEfectos()) }
+    var bgmVolume by remember { mutableFloatStateOf(viewModel.obtenerVolumenMusica()) }
 
     LaunchedEffect(Unit) {
-        viewModel.loadCurrentLevel()
+        viewModel.cargarNivelActual()
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -86,15 +86,15 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                 modifier = Modifier.size(28.dp).clickable { showSettings = true }
             )
             Text(
-                text = "Nivel ${state.currentLevel}",
+                text = "Nivel ${state.nivelActual}",
                 fontSize = 20.sp,
                 color = Color.White,
                 fontWeight = FontWeight.Bold
             )
-            val minutes = state.remainingTimeSeconds / 60
-            val seconds = state.remainingTimeSeconds % 60
+            val minutes = state.tiempoRestante / 60
+            val seconds = state.tiempoRestante % 60
             val timeText = "%02d:%02d".format(minutes, seconds)
-            val isLowTime = state.remainingTimeSeconds < 60
+            val isLowTime = state.tiempoRestante < 60
             Text(
                 text = timeText,
                 fontSize = 20.sp,
@@ -104,12 +104,12 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
         }
 
         // Renderizar por profundidad: z bajo primero (atrás), z alto encima (delante)
-        state.tiles.sortedBy { it.z }.forEach { tile ->
+        state.fichas.sortedBy { it.z }.forEach { tile ->
             androidx.compose.runtime.key(tile.id) {
                 TileComponent(
                     tile = tile,
-                    tileSize = state.tileSize,
-                    onClick = { viewModel.onTileClick(tile) }
+                    tamanoFicha = state.tamanoFicha,
+                    onClick = { viewModel.pulsarFicha(tile) }
                 )
             }
         }
@@ -126,16 +126,16 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                 modifier = Modifier.padding(bottom = 8.dp)
             ) {
                 Button(
-                    onClick = { viewModel.undoMove() },
-                    enabled = state.remainingUndos > 0
+                    onClick = { viewModel.deshacerMovimiento() },
+                    enabled = state.deshacerRestantes > 0
                 ) {
-                    Text("Deshacer (${state.remainingUndos})")
+                    Text("Deshacer (${state.deshacerRestantes})")
                 }
                 Button(
-                    onClick = { viewModel.shuffleTiles() },
-                    enabled = state.remainingShuffles > 0
+                    onClick = { viewModel.mezclarFichas() },
+                    enabled = state.mezclasRestantes > 0
                 ) {
-                    Text("Mezclar (${state.remainingShuffles})")
+                    Text("Mezclar (${state.mezclasRestantes})")
                 }
             }
 
@@ -159,14 +159,14 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     items(
-                        items = state.trayTiles,
+                        items = state.fichasBandeja,
                         key = { it.id }
                     ) { tile ->
-                        val isEliminating = state.eliminatingTiles.any { it.id == tile.id }
+                        val isEliminating = state.fichasEliminando.any { it.id == tile.id }
                         // En el tray las cartas no tienen posición absoluta, se ordenan en LazyRow
                         TileComponent(
                             tile = tile.copy(x = 0f, y = 0f),
-                            tileSize = state.tileSize,
+                            tamanoFicha = state.tamanoFicha,
                             onClick = {},
                             modifier = Modifier.animateItem(),
                             isEliminating = isEliminating
@@ -176,7 +176,7 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
             }
         }
 
-        if (state.isGameOver) {
+        if (state.juegoTerminado) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -187,7 +187,7 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    if (state.isTimeUp) {
+                    if (state.tiempoAgotado) {
                         Text(
                             text = "⏰ ¡Tiempo agotado!",
                             fontSize = 36.sp,
@@ -203,18 +203,18 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                         )
                     }
                     Text(
-                        text = "Puntuación: ${state.score}",
+                        text = "Puntuación: ${state.puntuacion}",
                         fontSize = 20.sp,
                         color = Color.White
                     )
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Button(onClick = { viewModel.resetGame() }) {
+                        Button(onClick = { viewModel.reiniciarJuego() }) {
                             Text("Reintentar")
                         }
                         Button(onClick = {
-                            viewModel.resetGame()
+                            viewModel.reiniciarJuego()
                             onBackToMenu()
                         }) {
                             Text("Inicio")
@@ -234,7 +234,7 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                             value = sfxVolume,
                             onValueChange = {
                                 sfxVolume = it
-                                viewModel.setSfxVolume(it)
+                                viewModel.cambiarVolumenEfectos(it)
                             }
                         )
                         Text("Música de fondo")
@@ -242,7 +242,7 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                             value = bgmVolume,
                             onValueChange = {
                                 bgmVolume = it
-                                viewModel.setBgmVolume(it)
+                                viewModel.cambiarVolumenMusica(it)
                             }
                         )
                     }
@@ -251,7 +251,7 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = {
                             showSettings = false
-                            viewModel.resetGame()
+                            viewModel.reiniciarJuego()
                             onBackToMenu()
                         }) {
                             Text("Inicio")
@@ -264,7 +264,7 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
             )
         }
 
-        if (state.showLevelUp) {
+        if (state.mostrarSubidaNivel) {
             val scale = remember { Animatable(0.5f) }
             LaunchedEffect(Unit) {
                 scale.animateTo(1f, tween(400))
@@ -297,7 +297,7 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
             }
         }
 
-        if (state.isWin) {
+        if (state.victoria) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -315,7 +315,7 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Puntuación: ${state.score}",
+                        text = "Puntuación: ${state.puntuacion}",
                         fontSize = 20.sp,
                         color = Color.White
                     )
@@ -323,7 +323,7 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                         Text("Ver Ranking")
                     }
                     Button(onClick = {
-                        viewModel.resetGame()
+                        viewModel.reiniciarJuego()
                         onBackToMenu()
                     }) {
                         Text("Jugar de nuevo")
@@ -338,7 +338,7 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
 @Composable
 fun TileComponent(
     tile: Tile,
-    tileSize: Float,
+    tamanoFicha: Float,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     isEliminating: Boolean = false
@@ -359,10 +359,10 @@ fun TileComponent(
     Box(
         modifier = modifier
             .offset(x = tile.x.dp, y = tile.y.dp)
-            .size(tileSize.dp)
+            .size(tamanoFicha.dp)
             .scale(scale.value)
             .alpha(alpha.value)
-            .clickable(enabled = !tile.isBlocked && !isEliminating) { onClick() }
+            .clickable(enabled = !tile.estaBloqueada && !isEliminating) { onClick() }
     ) {
         Card(
             modifier = Modifier.fillMaxSize(),
@@ -371,7 +371,7 @@ fun TileComponent(
             colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
             Image(
-                painter = painterResource(id = tile.iconRes),
+                painter = painterResource(id = tile.iconoRecurso),
                 contentDescription = "Tile Icon",
                 modifier = Modifier
                     .fillMaxSize()
@@ -380,7 +380,7 @@ fun TileComponent(
             )
         }
 
-        if (tile.isBlocked) {
+        if (tile.estaBloqueada) {
             // Capa semitransparente sobre cartas bloqueadas
             Box(
                 modifier = Modifier

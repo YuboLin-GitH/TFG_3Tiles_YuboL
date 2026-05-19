@@ -18,24 +18,24 @@ class SoundManager(context: Context) {
         )
         .build()
 
-    private val clickSoundId: Int
-    private val matchSoundId: Int
-    private val loadedSounds = mutableSetOf<Int>()
+    private val idSonidoClick: Int
+    private val idSonidoCoincidencia: Int
+    private val sonidosCargados = mutableSetOf<Int>()
 
-    var sfxVolume = prefs.getFloat("sfx_volume", 1f)
+    var volumenEfectos = prefs.getFloat("sfx_volume", 1f)
         private set
-    var bgmVolume = prefs.getFloat("bgm_volume", 1f)
+    var volumenMusica = prefs.getFloat("bgm_volume", 1f)
         private set
 
     init {
-        soundPool.setOnLoadCompleteListener { _, sampleId, status ->
+        soundPool.setOnLoadCompleteListener { _, idMuestra, status ->
             if (status == 0) {
-                loadedSounds.add(sampleId)
+                sonidosCargados.add(idMuestra)
             }
         }
 
-        clickSoundId = soundPool.load(context, R.raw.click, 1)
-        matchSoundId = soundPool.load(context, R.raw.match_3, 1)
+        idSonidoClick = soundPool.load(context, R.raw.click, 1)
+        idSonidoCoincidencia = soundPool.load(context, R.raw.match_3, 1)
     }
 
     private var mediaPlayer: MediaPlayer? = MediaPlayer.create(context, R.raw.lily_paddling_down_the_stream)
@@ -44,38 +44,38 @@ class SoundManager(context: Context) {
         mediaPlayer?.isLooping = true
     }
 
-    fun playClick() {
-        if (clickSoundId in loadedSounds) {
-            soundPool.play(clickSoundId, sfxVolume, sfxVolume, 1, 0, 1f)
+    fun reproducirClick() {
+        if (idSonidoClick in sonidosCargados) {
+            soundPool.play(idSonidoClick, volumenEfectos, volumenEfectos, 1, 0, 1f)
         }
     }
 
-    fun playMatch() {
-        if (matchSoundId in loadedSounds) {
-            soundPool.play(matchSoundId, sfxVolume, sfxVolume, 1, 0, 1f)
+    fun reproducirCoincidencia() {
+        if (idSonidoCoincidencia in sonidosCargados) {
+            soundPool.play(idSonidoCoincidencia, volumenEfectos, volumenEfectos, 1, 0, 1f)
         }
     }
 
-    fun setSfxVolume(volume: Float) {
-        sfxVolume = volume.coerceIn(0f, 1f)
-        prefs.edit { putFloat("sfx_volume", sfxVolume) }
+    fun cambiarVolumenEfectos(volume: Float) {
+        volumenEfectos = volume.coerceIn(0f, 1f)
+        prefs.edit { putFloat("sfx_volume", volumenEfectos) }
     }
 
-    fun setBgmVolume(volume: Float) {
-        bgmVolume = volume.coerceIn(0f, 1f)
-        prefs.edit { putFloat("bgm_volume", bgmVolume) }
-        mediaPlayer?.setVolume(bgmVolume, bgmVolume)
+    fun cambiarVolumenMusica(volume: Float) {
+        volumenMusica = volume.coerceIn(0f, 1f)
+        prefs.edit { putFloat("bgm_volume", volumenMusica) }
+        mediaPlayer?.setVolume(volumenMusica, volumenMusica)
     }
 
-    fun startBGM() {
+    fun iniciarMusicaFondo() {
         mediaPlayer?.let { if (!it.isPlaying) it.start() }
     }
 
-    fun pauseBGM() {
+    fun pausarMusicaFondo() {
         mediaPlayer?.let { if (it.isPlaying) it.pause() }
     }
 
-    fun release() {
+    fun liberar() {
         soundPool.release()
         mediaPlayer?.release()
         mediaPlayer = null

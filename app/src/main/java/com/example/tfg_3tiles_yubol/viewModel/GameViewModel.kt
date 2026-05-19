@@ -48,158 +48,158 @@ class GameViewModel() : ViewModel() {
         appContext!!.getSharedPreferences("login_prefs", Context.MODE_PRIVATE)
     }
 
-     private val checkMatchUseCase = CheckMatchUseCase()
-     private var checkBlockUseCase = CheckBlockUseCase(55f)
+     private val comprobarCoincidencia = CheckMatchUseCase()
+     private var comprobarBloqueo = CheckBlockUseCase(55f)
 
-    private var currentLevel = 1
+    private var nivelActual = 1
     private val _gameState = MutableStateFlow(GameState())
     val gameState: StateFlow<GameState> = _gameState.asStateFlow()
 
     private val _loginStatus = MutableStateFlow<AuthStatus>(AuthStatus.Idle)
     val loginStatus: StateFlow<AuthStatus> = _loginStatus.asStateFlow()
 
-    private var timerJob: Job? = null
+    private var temporizador: Job? = null
 
 
-    fun loadTiles(tiles: List<Tile>) {
+    fun cargarFichas(fichas: List<Tile>) {
         _gameState.value = _gameState.value.copy(
-            tiles = updateBlockedState(tiles))
+            fichas =actualizarBloqueos(fichas))
     }
 
 
-    private var soundManager: SoundManager? = null
+    private var gestorSonido: SoundManager? = null
 
-    fun initSound(context: Context) {
+    fun iniciarSonido(context: Context) {
         appContext = context.applicationContext
-        soundManager = SoundManager(context)
-        soundManager?.startBGM()
+        gestorSonido = SoundManager(context)
+        gestorSonido?.iniciarMusicaFondo()
     }
 
-    fun pauseMusic() {
-        soundManager?.pauseBGM()
+    fun pausarMusica() {
+        gestorSonido?.pausarMusicaFondo()
     }
 
-    fun resumeMusic() {
-        soundManager?.startBGM()
+    fun reanudarMusica() {
+        gestorSonido?.iniciarMusicaFondo()
     }
 
-    fun releaseMusic() {
-        soundManager?.release()
-        soundManager = null
+    fun liberarMusica() {
+        gestorSonido?.liberar()
+        gestorSonido = null
     }
 
-    fun setDifficulty(difficulty: Difficulty) {
-        cancelTimer()
+    fun cambiarDificultad(dificultad: Difficulty) {
+        cancelarTemporizador()
         _gameState.value = _gameState.value.copy(
-            difficulty = difficulty,
-            remainingTimeSeconds = difficulty.timeSeconds,
-            remainingUndos = difficulty.maxUndos,
-            remainingShuffles = difficulty.maxShuffles,
-            isTimeUp = false
+            dificultad = dificultad,
+            tiempoRestante = dificultad.tiempoSegundos,
+            deshacerRestantes = dificultad.maxDeshacer,
+            mezclasRestantes = dificultad.maxMezclas,
+            tiempoAgotado = false
         )
     }
 
-    private fun startTimer() {
-        cancelTimer()
-        timerJob = viewModelScope.launch {
-            while (_gameState.value.remainingTimeSeconds > 0) {
+    private fun iniciarTemporizador() {
+        cancelarTemporizador()
+        temporizador = viewModelScope.launch {
+            while (_gameState.value.tiempoRestante > 0) {
                 delay(1000L)
                 val state = _gameState.value
                 // Pausar el temporizador durante game over, victoria o transición de nivel
-                if (state.isGameOver || state.isWin || state.showLevelUp) break
-                val newTime = state.remainingTimeSeconds - 1
-                if (newTime <= 0) {
+                if (state.juegoTerminado || state.victoria || state.mostrarSubidaNivel) break
+                val nuevoTiempo = state.tiempoRestante - 1
+                if (nuevoTiempo <= 0) {
                     _gameState.value = state.copy(
-                        remainingTimeSeconds = 0,
-                        isTimeUp = true,
-                        isGameOver = true
+                        tiempoRestante = 0,
+                        tiempoAgotado = true,
+                        juegoTerminado = true
                     )
-                    saveScoreToSupabase()
+                    guardarPuntuacion()
                     break
                 }
-                _gameState.value = state.copy(remainingTimeSeconds = newTime)
+                _gameState.value = state.copy(tiempoRestante = nuevoTiempo)
             }
         }
     }
 
-    private fun cancelTimer() {
-        timerJob?.cancel()
-        timerJob = null
+    private fun cancelarTemporizador() {
+        temporizador?.cancel()
+        temporizador = null
     }
 
     // Lógica principal: clic → quitar del tablero → insertar al frente del tray →
     // detectar trío → animar eliminación (250ms) → comprobar victoria/derrota
-    fun onTileClick(tile: Tile) {
+    fun pulsarFicha(tile: Tile) {
         val state = _gameState.value
 
-        if (tile.isBlocked || state.isGameOver || state.isAnimating || state.showLevelUp) return
+        if (tile.estaBloqueada || state.juegoTerminado || state.animando || state.mostrarSubidaNivel) return
 
-        val newTiles = state.tiles.filter { it.id != tile.id }
-        val newTray = listOf(tile) + state.trayTiles
-        soundManager?.playClick()
+        val nuevasFichas = state.fichas.filter { it.id != tile.id }
+        val nuevaBandeja = listOf(tile) + state.fichasBandeja
+        gestorSonido?.reproducirClick()
 
-        val matched = checkMatchUseCase.checkMatch(newTray)
+        val coincidencias = comprobarCoincidencia.buscarTrios(nuevaBandeja)
 
-        if (matched.isNotEmpty()) {
+        if (coincidencias.isNotEmpty()) {
             _gameState.value = state.copy(
-                tiles = updateBlockedState(newTiles),
-                trayTiles = newTray,
-                eliminatingTiles = matched,
-                isAnimating = true
+                fichas =actualizarBloqueos(nuevasFichas),
+                fichasBandeja = nuevaBandeja,
+                fichasEliminando = coincidencias,
+                animando = true
             )
-            soundManager?.playMatch()
+            gestorSonido?.reproducirCoincidencia()
 
             viewModelScope.launch {
                 delay(ELIMINATE_DURATION_MS)
 
                 val final = _gameState.value
-                val afterMatchTray = final.trayTiles.filterNot { t -> matched.any { it.id == t.id } }
-                val newScore = final.score + 10
-                val finalTiles = updateBlockedState(final.tiles)
-                val won = finalTiles.isEmpty() && afterMatchTray.isEmpty()
+                val bandejaTrasCoincidencia = final.fichasBandeja.filterNot { t -> coincidencias.any { it.id == t.id } }
+                val nuevaPuntuacion = final.puntuacion + 10
+                val fichasFinales = actualizarBloqueos(final.fichas)
+                val ganado = fichasFinales.isEmpty() && bandejaTrasCoincidencia.isEmpty()
                 _gameState.value = final.copy(
-                    tiles = finalTiles,
-                    trayTiles = afterMatchTray,
-                    score = newScore,
-                    eliminatingTiles = emptyList(),
-                    isGameOver = afterMatchTray.size >= 7,
-                    isWin = won && currentLevel != 1,
-                    isAnimating = false
+                    fichas =fichasFinales,
+                    fichasBandeja = bandejaTrasCoincidencia,
+                    puntuacion = nuevaPuntuacion,
+                    fichasEliminando = emptyList(),
+                    juegoTerminado = bandejaTrasCoincidencia.size >= 7,
+                    victoria = ganado && nivelActual != 1,
+                    animando = false
                 )
-                if (won) {
-                    if (currentLevel == 1) {
-                        _gameState.value = _gameState.value.copy(showLevelUp = true)
+                if (ganado) {
+                    if (nivelActual == 1) {
+                        _gameState.value = _gameState.value.copy(mostrarSubidaNivel = true)
                         delay(1500)
-                        goToNextLevel()
+                        siguienteNivel()
                     } else {
-                        saveScoreToSupabase()
+                        guardarPuntuacion()
                     }
-                } else if (afterMatchTray.size >= 7 && currentLevel == 2) {
-                    saveScoreToSupabase()
+                } else if (bandejaTrasCoincidencia.size >= 7 && nivelActual == 2) {
+                    guardarPuntuacion()
                 }
             }
         } else {
-            val finalTiles = updateBlockedState(newTiles)
-            val won = finalTiles.isEmpty() && newTray.isEmpty()
+            val fichasFinales = actualizarBloqueos(nuevasFichas)
+            val ganado = fichasFinales.isEmpty() && nuevaBandeja.isEmpty()
             _gameState.value = state.copy(
-                tiles = finalTiles,
-                trayTiles = newTray,
-                isGameOver = newTray.size >= 7,
-                isWin = won && currentLevel != 1,
-                isAnimating = false
+                fichas =fichasFinales,
+                fichasBandeja = nuevaBandeja,
+                juegoTerminado = nuevaBandeja.size >= 7,
+                victoria = ganado && nivelActual != 1,
+                animando = false
             )
-            if (won) {
-                if (currentLevel == 1) {
-                    _gameState.value = _gameState.value.copy(showLevelUp = true)
+            if (ganado) {
+                if (nivelActual == 1) {
+                    _gameState.value = _gameState.value.copy(mostrarSubidaNivel = true)
                     viewModelScope.launch {
                         delay(1500)
-                        goToNextLevel()
+                        siguienteNivel()
                     }
                 } else {
-                    saveScoreToSupabase()
+                    guardarPuntuacion()
                 }
-            } else if (newTray.size >= 7 && currentLevel == 2) {
-                saveScoreToSupabase()
+            } else if (nuevaBandeja.size >= 7 && nivelActual == 2) {
+                guardarPuntuacion()
             }
         }
     }
@@ -209,10 +209,10 @@ class GameViewModel() : ViewModel() {
     }
 
 
-    // Recalcula isBlocked para todas las cartas tras cada movimiento
-    private fun updateBlockedState(tiles: List<Tile>): List<Tile> {
-        return tiles.map { tile ->
-            tile.copy(isBlocked = checkBlockUseCase.isBlocked(tile, tiles))
+    // Recalcula estaBloqueada para todas las cartas tras cada movimiento
+    private fun actualizarBloqueos(fichas: List<Tile>): List<Tile> {
+        return fichas.map { tile ->
+            tile.copy(estaBloqueada = comprobarBloqueo.estaBloqueado(tile, fichas))
         }
     }
 
@@ -220,112 +220,112 @@ class GameViewModel() : ViewModel() {
 
 
     // Avanza al siguiente nivel conservando puntuación, dificultad, tiempo y ayudas restantes
-    fun goToNextLevel() {
+    fun siguienteNivel() {
         val state = _gameState.value
-        currentLevel++
+        nivelActual++
         _gameState.value = GameState(
-            currentLevel = currentLevel,
-            score = state.score,
-            difficulty = state.difficulty,
-            remainingTimeSeconds = state.remainingTimeSeconds,
-            remainingUndos = state.remainingUndos,
-            remainingShuffles = state.remainingShuffles
+            nivelActual = nivelActual,
+            puntuacion = state.puntuacion,
+            dificultad = state.dificultad,
+            tiempoRestante = state.tiempoRestante,
+            deshacerRestantes = state.deshacerRestantes,
+            mezclasRestantes = state.mezclasRestantes
         )
-        loadCurrentLevel()
+        cargarNivelActual()
     }
-    fun resetGame() {
-        cancelTimer()
-        currentLevel = 1
-        val diff = _gameState.value.difficulty
+    fun reiniciarJuego() {
+        cancelarTemporizador()
+        nivelActual = 1
+        val dificultadLocal= _gameState.value.dificultad
         _gameState.value = GameState(
-            currentLevel = 1,
-            difficulty = diff,
-            remainingTimeSeconds = diff.timeSeconds,
-            remainingUndos = diff.maxUndos,
-            remainingShuffles = diff.maxShuffles
+            nivelActual = 1,
+            dificultad = dificultadLocal,
+            tiempoRestante = dificultadLocal.tiempoSegundos,
+            deshacerRestantes = dificultadLocal.maxDeshacer,
+            mezclasRestantes = dificultadLocal.maxMezclas
         )
-        loadCurrentLevel()
+        cargarNivelActual()
     }
 
 
-    fun loadCurrentLevel() {
-        val level = when (currentLevel) {
+    fun cargarNivelActual() {
+        val nivel = when (nivelActual) {
             1 -> com.example.tfg_3tiles_yubol.data.local.LevelData.getLevel1()
             2 -> com.example.tfg_3tiles_yubol.data.local.LevelData.getLevel2()
             else -> com.example.tfg_3tiles_yubol.data.local.LevelData.getLevel1()
         }
-        loadLevel(level)
-        startTimer()
+        cargarNivel(nivel)
+        iniciarTemporizador()
     }
 
-    fun loadLevel(level: Level) {
-        loadTiles(level.tiles)
+    fun cargarNivel(nivel: Level) {
+        cargarFichas(nivel.fichas)
     }
 
-    fun getSfxVolume(): Float = soundManager?.sfxVolume ?: 1f
-    fun getBgmVolume(): Float = soundManager?.bgmVolume ?: 1f
+    fun obtenerVolumenEfectos(): Float = gestorSonido?.volumenEfectos ?: 1f
+    fun obtenerVolumenMusica(): Float = gestorSonido?.volumenMusica ?: 1f
 
-    fun setSfxVolume(volume: Float) {
-        soundManager?.setSfxVolume(volume)
+    fun cambiarVolumenEfectos(volume: Float) {
+        gestorSonido?.cambiarVolumenEfectos(volume)
     }
 
-    fun setBgmVolume(volume: Float) {
-        soundManager?.setBgmVolume(volume)
+    fun cambiarVolumenMusica(volume: Float) {
+        gestorSonido?.cambiarVolumenMusica(volume)
     }
 
-    fun undoMove() {
+    fun deshacerMovimiento() {
         val state = _gameState.value
-        if (state.isAnimating || state.isGameOver || state.showLevelUp || state.trayTiles.isEmpty()) return
-        if (state.remainingUndos <= 0) return
-        val lastTile = state.trayTiles.first()
-        val newTray = state.trayTiles.drop(1)
-        val newTiles = state.tiles + lastTile
+        if (state.animando || state.juegoTerminado || state.mostrarSubidaNivel || state.fichasBandeja.isEmpty()) return
+        if (state.deshacerRestantes <= 0) return
+        val ultimaFicha = state.fichasBandeja.first()
+        val nuevaBandeja = state.fichasBandeja.drop(1)
+        val nuevasFichas = state.fichas + ultimaFicha
 
         _gameState.value = state.copy(
-            tiles = updateBlockedState(newTiles),
-            trayTiles = newTray,
-            isGameOver = false,
-            remainingUndos = state.remainingUndos - 1
+            fichas =actualizarBloqueos(nuevasFichas),
+            fichasBandeja = nuevaBandeja,
+            juegoTerminado = false,
+            deshacerRestantes = state.deshacerRestantes - 1
         )
     }
 
-    fun shuffleTiles() {
+    fun mezclarFichas() {
         val state = _gameState.value
-        if (state.isAnimating || state.isGameOver || state.showLevelUp || state.remainingShuffles <= 0) return
-        val currentTiles = state.tiles
+        if (state.animando || state.juegoTerminado || state.mostrarSubidaNivel || state.mezclasRestantes <= 0) return
+        val fichasActuales = state.fichas
 
-        val shuffledTypes = currentTiles.map { it.type }.shuffled()
+        val tiposMezclados = fichasActuales.map { it.tipo }.shuffled()
 
-        val shuffledTiles = currentTiles.mapIndexed { index, tile ->
-            val newType = shuffledTypes[index]
+        val fichasMezcladas = fichasActuales.mapIndexed { index, tile ->
+            val nuevoTipo = tiposMezclados[index]
             tile.copy(
-                type = newType,
-                iconRes = TileIconMap.icons[newType]!!
+                tipo = nuevoTipo,
+                iconoRecurso = TileIconMap.icons[nuevoTipo]!!
             )
         }
 
         _gameState.value = state.copy(
-            tiles = shuffledTiles,
-            remainingShuffles = state.remainingShuffles - 1
+            fichas =fichasMezcladas,
+            mezclasRestantes = state.mezclasRestantes - 1
         )
     }
 
-    fun tryAutoLogin() {
-        val wasLoggedIn = loginPrefs.getBoolean("was_logged_in", false)
-        if (!wasLoggedIn) return
+    fun intentarAutoLogin() {
+        val estabaLogueado = loginPrefs.getBoolean("was_logged_in", false)
+        if (!estabaLogueado) return
 
         viewModelScope.launch {
             try {
-                var user = supabase.auth.currentUserOrNull()
-                if (user != null) {
+                var usuario= supabase.auth.currentUserOrNull()
+                if (usuario != null) {
                     _loginStatus.value = AuthStatus.Success
                     return@launch
                 }
                 // Reintentar: la sesión de Supabase puede tardar en cargar desde SharedPreferences
                 repeat(5) {
                     delay(500)
-                    user = supabase.auth.currentUserOrNull()
-                    if (user != null) {
+                    usuario = supabase.auth.currentUserOrNull()
+                    if (usuario != null) {
                         _loginStatus.value = AuthStatus.Success
                         return@launch
                     }
@@ -337,9 +337,9 @@ class GameViewModel() : ViewModel() {
         }
     }
 
-    fun getSavedEmail(): String = loginPrefs.getString("email", "") ?: ""
+    fun obtenerEmailGuardado(): String = loginPrefs.getString("email", "") ?: ""
 
-    fun registerUser(email: String, password: String) {
+    fun registrarUsuario(email: String, password: String) {
         viewModelScope.launch {
             _loginStatus.value = AuthStatus.Loading
             try {
@@ -353,12 +353,12 @@ class GameViewModel() : ViewModel() {
                     putString("email", email)
                 }
             } catch (e: Exception) {
-                _loginStatus.value = AuthStatus.Error(translateError(e.message))
+                _loginStatus.value = AuthStatus.Error(traducirError(e.message))
             }
         }
     }
 
-    fun signIn(email: String, password: String) {
+    fun iniciarSesion(email: String, password: String) {
         viewModelScope.launch {
             _loginStatus.value = AuthStatus.Loading
             try {
@@ -372,12 +372,12 @@ class GameViewModel() : ViewModel() {
                     putString("email", email)
                 }
             } catch (e: Exception) {
-                _loginStatus.value = AuthStatus.Error(translateError(e.message))
+                _loginStatus.value = AuthStatus.Error(traducirError(e.message))
             }
         }
     }
 
-    private fun translateError(message: String?): String {
+    private fun traducirError(message: String?): String {
         val texto = message ?: return "Error desconocido"
         return when {
             texto.contains("Invalid login credentials", ignoreCase = true) ->
@@ -427,18 +427,18 @@ class GameViewModel() : ViewModel() {
         }
     }
 
-    fun resetAuthStatus() {
+    fun limpiarEstadoAuth() {
         _loginStatus.value = AuthStatus.Idle
     }
 
-    fun logout() {
-        cancelTimer()
+    fun cerrarSesion() {
+        cancelarTemporizador()
         loginPrefs.edit { clear() }
         viewModelScope.launch {
             try {
                 supabase.auth.signOut()
                 _loginStatus.value = AuthStatus.Idle
-                resetGame()
+                reiniciarJuego()
             } catch (e: Exception) {
                 println("Error al cerrar sesión: ${e.message}")
             }
@@ -458,13 +458,13 @@ class GameViewModel() : ViewModel() {
     private val _rankings = MutableStateFlow<List<RankingRecord>>(emptyList())
     val rankings: StateFlow<List<RankingRecord>> = _rankings.asStateFlow()
 
-    fun fetchRankings() {
+    fun cargarRankings() {
         viewModelScope.launch {
             try {
-                val data = supabase.from("rankings").select()
+                val datos = supabase.from("rankings").select()
                     .decodeList<RankingRecord>()
                 // Cada usuario tiene una entrada por dificultad (mejor puntuación en cada una)
-                _rankings.value = data
+                _rankings.value = datos
                     .groupBy { it.user_id to it.difficulty }
                     .map { (_, records) -> records.maxBy { it.score } }
                     .sortedWith(compareByDescending<RankingRecord> { it.score }
@@ -475,7 +475,7 @@ class GameViewModel() : ViewModel() {
         }
     }
 
-    fun saveScoreToSupabase() {
+    fun guardarPuntuacion() {
         val state = _gameState.value
         viewModelScope.launch {
             try {
@@ -484,12 +484,12 @@ class GameViewModel() : ViewModel() {
                     val registro = RankingRequest(
                         user_id = usuarioActual.id,
                         email = usuarioActual.email ?: "Anónimo",
-                        score = state.score,
-                        difficulty = state.difficulty.label,
-                        time_left = state.remainingTimeSeconds
+                        score = state.puntuacion,
+                        difficulty = state.dificultad.etiqueta,
+                        time_left = state.tiempoRestante
                     )
                     supabase.from("rankings").insert(registro)
-                    println("Puntuacion guardada: ${state.score}, dificultad: ${state.difficulty.label}")
+                    println("Puntuacion guardada: ${state.puntuacion}, dificultad: ${state.dificultad.etiqueta}")
                 } else {
                     println("No hay usuario autenticado")
                 }
