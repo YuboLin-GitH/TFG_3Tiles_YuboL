@@ -20,8 +20,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Slider
@@ -224,44 +224,85 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
             }
         }
         if (showSettings) {
-            AlertDialog(
-                onDismissRequest = { showSettings = false },
-                title = { Text("Ajustes") },
-                text = {
-                    Column {
-                        Text("Efectos de sonido")
-                        Slider(
-                            value = sfxVolume,
-                            onValueChange = {
-                                sfxVolume = it
-                                viewModel.cambiarVolumenEfectos(it)
-                            }
-                        )
-                        Text("Música de fondo")
-                        Slider(
-                            value = bgmVolume,
-                            onValueChange = {
-                                bgmVolume = it
-                                viewModel.cambiarVolumenMusica(it)
-                            }
-                        )
-                    }
-                },
-                confirmButton = {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = {
-                            showSettings = false
-                            viewModel.reiniciarJuego()
-                            onBackToMenu()
-                        }) {
-                            Text("Inicio")
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .clickable { showSettings = false }
+            )
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth(0.85f)
+                    .align(Alignment.Center),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF0D1B2A)
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Ajustes",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(
+                        text = "Efectos: ${(sfxVolume * 100).toInt()}%",
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.7f)
+                    )
+                    Slider(
+                        value = sfxVolume,
+                        onValueChange = {
+                            sfxVolume = it
+                            viewModel.cambiarVolumenEfectos(it)
                         }
-                        Button(onClick = { showSettings = false }) {
-                            Text("OK")
+                    )
+                    Text(
+                        text = "Música: ${(bgmVolume * 100).toInt()}%",
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.7f)
+                    )
+                    Slider(
+                        value = bgmVolume,
+                        onValueChange = {
+                            bgmVolume = it
+                            viewModel.cambiarVolumenMusica(it)
+                        }
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = { showSettings = false },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF2E8B57)
+                            )
+                        ) {
+                            Text("Cerrar", fontSize = 14.sp, color = Color.White)
+                        }
+                        Button(
+                            onClick = {
+                                showSettings = false
+                                viewModel.reiniciarJuego()
+                                onBackToMenu()
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Inicio", fontSize = 14.sp)
                         }
                     }
                 }
-            )
+            }
         }
 
         if (state.mostrarSubidaNivel) {
