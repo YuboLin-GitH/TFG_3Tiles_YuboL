@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,8 +56,8 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
     val state by viewModel.gameState.collectAsState()
 
     var showSettings by remember { mutableStateOf(false) }
-    var sfxVolume by remember { mutableStateOf(1f) }
-    var bgmVolume by remember { mutableStateOf(1f) }
+    var sfxVolume by remember { mutableFloatStateOf(viewModel.getSfxVolume()) }
+    var bgmVolume by remember { mutableFloatStateOf(viewModel.getBgmVolume()) }
 
     LaunchedEffect(Unit) {
         viewModel.loadCurrentLevel()
@@ -318,14 +319,8 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                         fontSize = 20.sp,
                         color = Color.White
                     )
-                    if (state.currentLevel == 1) {
-                        Button(onClick = { viewModel.goToNextLevel() }) {
-                            Text("Siguiente nivel →")
-                        }
-                    } else {
-                        Button(onClick = onViewRanking) {
-                            Text("Ver Ranking")
-                        }
+                    Button(onClick = onViewRanking) {
+                        Text("Ver Ranking")
                     }
                     Button(onClick = {
                         viewModel.resetGame()

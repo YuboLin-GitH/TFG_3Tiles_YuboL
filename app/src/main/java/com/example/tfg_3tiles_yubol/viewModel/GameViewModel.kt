@@ -132,7 +132,7 @@ class GameViewModel() : ViewModel() {
     fun onTileClick(tile: Tile) {
         val state = _gameState.value
 
-        if (tile.isBlocked || state.isGameOver || state.isAnimating) return
+        if (tile.isBlocked || state.isGameOver || state.isAnimating || state.showLevelUp) return
 
         val newTiles = state.tiles.filter { it.id != tile.id }
         val newTray = listOf(tile) + state.trayTiles
@@ -174,6 +174,8 @@ class GameViewModel() : ViewModel() {
                     } else {
                         saveScoreToSupabase()
                     }
+                } else if (afterMatchTray.size >= 7 && currentLevel == 2) {
+                    saveScoreToSupabase()
                 }
             }
         } else {
@@ -196,6 +198,8 @@ class GameViewModel() : ViewModel() {
                 } else {
                     saveScoreToSupabase()
                 }
+            } else if (newTray.size >= 7 && currentLevel == 2) {
+                saveScoreToSupabase()
             }
         }
     }
