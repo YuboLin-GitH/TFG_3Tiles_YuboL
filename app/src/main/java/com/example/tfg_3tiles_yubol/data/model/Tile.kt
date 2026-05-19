@@ -7,5 +7,5 @@ data class Tile(
     val y: Float,
     val z: Int,
     val iconoRecurso: Int,         // para imagen de cada carta
-    var estaBloqueada: Boolean = false
+    val estaBloqueada: Boolean = false
 )

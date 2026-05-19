@@ -326,7 +326,7 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                         viewModel.reiniciarJuego()
                         onBackToMenu()
                     }) {
-                        Text("Jugar de nuevo")
+                        Text("Inicio")
                     }
                 }
             }

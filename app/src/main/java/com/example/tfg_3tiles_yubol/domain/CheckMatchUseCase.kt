@@ -8,6 +8,7 @@ class CheckMatchUseCase {
         return tray.groupBy { it.tipo }
             .values
             .filter { it.size >= 3 }
+            .map { it.take(3) }
             .flatten()
     }
 }

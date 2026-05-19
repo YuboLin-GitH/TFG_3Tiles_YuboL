@@ -150,7 +150,7 @@ class GameViewModel() : ViewModel() {
             gestorSonido?.reproducirCoincidencia()
 
             viewModelScope.launch {
-                delay(ELIMINATE_DURATION_MS)
+                delay(DURACION_ELIMINACION_MS)
 
                 val final = _gameState.value
                 val bandejaTrasCoincidencia = final.fichasBandeja.filterNot { t -> coincidencias.any { it.id == t.id } }
@@ -205,7 +205,7 @@ class GameViewModel() : ViewModel() {
     }
 
     companion object {
-        private const val ELIMINATE_DURATION_MS = 250L
+        private const val DURACION_ELIMINACION_MS = 250L
     }
 
 

@@ -20,7 +20,7 @@ fun LoginScreen(viewModel: GameViewModel) {
     var localError by remember { mutableStateOf<String?>(null) }
     val authStatus by viewModel.loginStatus.collectAsState()
 
-    fun validateFields(): Boolean {
+    fun validarCampos(): Boolean {
         if (email.isBlank() && password.isBlank()) {
             localError = "El email y la contraseña son obligatorios"
             return false
@@ -80,7 +80,7 @@ fun LoginScreen(viewModel: GameViewModel) {
         } else {
             Button(
                 onClick = {
-                    if (validateFields()) {
+                    if (validarCampos()) {
                         viewModel.registrarUsuario(email, password)
                     }
                 },
@@ -93,7 +93,7 @@ fun LoginScreen(viewModel: GameViewModel) {
 
             OutlinedButton(
                 onClick = {
-                    if (validateFields()) {
+                    if (validarCampos()) {
                         viewModel.iniciarSesion(email, password)
                     }
                 },
