@@ -1,6 +1,7 @@
 package com.example.tfg_3tiles_yubol.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,6 +23,7 @@ fun RankingScreen(viewModel: GameViewModel, onBack: () -> Unit) {
     val rankings by viewModel.rankings.collectAsState()
     var selectedFilter by remember { mutableStateOf("Fácil") }
     val filters = listOf("Fácil", "Normal", "Difícil")
+    val currentUserEmail = viewModel.obtenerEmailGuardado()
 
     LaunchedEffect(Unit) {
         viewModel.cargarRankings()
@@ -93,7 +95,7 @@ fun RankingScreen(viewModel: GameViewModel, onBack: () -> Unit) {
         }
 
         LazyColumn(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().weight(1f),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             itemsIndexed(filteredRankings) { index, record ->
@@ -102,7 +104,8 @@ fun RankingScreen(viewModel: GameViewModel, onBack: () -> Unit) {
                     email = record.email,
                     difficulty = record.difficulty,
                     timeLeft = record.time_left,
-                    score = record.score
+                    score = record.score,
+                    isCurrentUser = record.email == currentUserEmail
                 )
             }
         }
@@ -123,15 +126,17 @@ private fun difficultyColor(label: String): Color = when (label) {
 }
 
 @Composable
-private fun RankingRow(position: Int, email: String, difficulty: String, timeLeft: Int, score: Int) {
+private fun RankingRow(position: Int, email: String, difficulty: String, timeLeft: Int, score: Int, isCurrentUser: Boolean = false) {
     val displayEmail = email.substringBefore("@")
     val isTop3 = position <= 3
-    val bgColor = when (position) {
-        1 -> Color(0xFFFFD700).copy(alpha = 0.15f)
-        2 -> Color(0xFFC0C0C0).copy(alpha = 0.15f)
-        3 -> Color(0xFFCD7F32).copy(alpha = 0.15f)
+    val bgColor = when {
+        isCurrentUser -> Color(0xFF1E90FF).copy(alpha = 0.25f)
+        position == 1 -> Color(0xFFFFD700).copy(alpha = 0.15f)
+        position == 2 -> Color(0xFFC0C0C0).copy(alpha = 0.15f)
+        position == 3 -> Color(0xFFCD7F32).copy(alpha = 0.15f)
         else -> Color.White.copy(alpha = 0.05f)
     }
+    val borderColor = if (isCurrentUser) Color(0xFF1E90FF) else Color.Transparent
     val minutes = timeLeft / 60
     val seconds = timeLeft % 60
     val timeText = "%d:%02d".format(minutes, seconds)
@@ -141,6 +146,10 @@ private fun RankingRow(position: Int, email: String, difficulty: String, timeLef
         modifier = Modifier
             .fillMaxWidth()
             .background(bgColor, RoundedCornerShape(8.dp))
+            .then(
+                if (isCurrentUser) Modifier.border(1.5.dp, borderColor, RoundedCornerShape(8.dp))
+                else Modifier
+            )
             .padding(horizontal = 4.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically

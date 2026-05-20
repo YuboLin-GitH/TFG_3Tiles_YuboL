@@ -81,12 +81,12 @@ fun LoginScreen(viewModel: GameViewModel) {
             Button(
                 onClick = {
                     if (validarCampos()) {
-                        viewModel.registrarUsuario(email, password)
+                        viewModel.iniciarSesion(email, password)
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp)
             ) {
-                Text("Registrarse")
+                Text("Iniciar Sesión")
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -94,12 +94,12 @@ fun LoginScreen(viewModel: GameViewModel) {
             OutlinedButton(
                 onClick = {
                     if (validarCampos()) {
-                        viewModel.iniciarSesion(email, password)
+                        viewModel.registrarUsuario(email, password)
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp)
             ) {
-                Text("Iniciar Sesión")
+                Text("Registrarse")
             }
         }
 
