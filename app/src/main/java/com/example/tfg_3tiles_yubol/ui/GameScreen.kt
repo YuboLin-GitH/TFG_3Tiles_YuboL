@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -139,11 +140,16 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                 }
             }
 
-            Box(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(135.dp)
             ) {
+                val rellenoDp = 4.dp
+                val tamanoMaximoDp = 55.dp
+                val tamanoCalculado = (maxWidth - rellenoDp * 2) / 7
+                val tamanoFichaBandeja = if (tamanoCalculado > tamanoMaximoDp) tamanoMaximoDp.value else tamanoCalculado.value
+
                 Image(
                     painter = painterResource(id = R.drawable.tray_carta),
                     contentDescription = null,
@@ -154,7 +160,7 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                 LazyRow(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = rellenoDp),
                     horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -163,10 +169,10 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                         key = { it.id }
                     ) { tile ->
                         val isEliminating = state.fichasEliminando.any { it.id == tile.id }
-                        // En el tray las cartas no tienen posición absoluta, se ordenan en LazyRow
+                        // Las fichas en la bandeja se ordenan en LazyRow
                         TileComponent(
                             tile = tile.copy(x = 0f, y = 0f),
-                            tamanoFicha = state.tamanoFicha,
+                            tamanoFicha = tamanoFichaBandeja,
                             onClick = {},
                             modifier = Modifier.animateItem(),
                             isEliminating = isEliminating
@@ -189,7 +195,7 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                 ) {
                     if (state.tiempoAgotado) {
                         Text(
-                            text = "⏰ ¡Tiempo agotado!",
+                            text = "¡Tiempo agotado!",
                             fontSize = 36.sp,
                             color = Color(0xFFFF4444),
                             fontWeight = FontWeight.Bold

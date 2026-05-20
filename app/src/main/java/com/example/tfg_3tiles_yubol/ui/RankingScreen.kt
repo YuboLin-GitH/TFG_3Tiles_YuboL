@@ -20,18 +20,14 @@ import com.example.tfg_3tiles_yubol.viewModel.GameViewModel
 @Composable
 fun RankingScreen(viewModel: GameViewModel, onBack: () -> Unit) {
     val rankings by viewModel.rankings.collectAsState()
-    var selectedFilter by remember { mutableStateOf("Todos") }
-    val filters = listOf("Todos", "Fácil", "Normal", "Difícil")
+    var selectedFilter by remember { mutableStateOf("Fácil") }
+    val filters = listOf("Fácil", "Normal", "Difícil")
 
     LaunchedEffect(Unit) {
         viewModel.cargarRankings()
     }
 
-    val filteredRankings = if (selectedFilter == "Todos") {
-        rankings
-    } else {
-        rankings.filter { it.difficulty == selectedFilter }
-    }
+    val filteredRankings = rankings.filter { it.difficulty == selectedFilter }
 
     Column(
         modifier = Modifier

@@ -42,6 +42,7 @@ class SoundManager(context: Context) {
 
     init {
         mediaPlayer?.isLooping = true
+        mediaPlayer?.setVolume(volumenMusica, volumenMusica)
     }
 
     fun reproducirClick() {
@@ -68,7 +69,10 @@ class SoundManager(context: Context) {
     }
 
     fun iniciarMusicaFondo() {
-        mediaPlayer?.let { if (!it.isPlaying) it.start() }
+        mediaPlayer?.let {
+            it.setVolume(volumenMusica, volumenMusica)
+            if (!it.isPlaying) it.start()
+        }
     }
 
     fun pausarMusicaFondo() {

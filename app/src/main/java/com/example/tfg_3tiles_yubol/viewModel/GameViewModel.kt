@@ -262,8 +262,14 @@ class GameViewModel() : ViewModel() {
         cargarFichas(nivel.fichas)
     }
 
-    fun obtenerVolumenEfectos(): Float = gestorSonido?.volumenEfectos ?: 1f
-    fun obtenerVolumenMusica(): Float = gestorSonido?.volumenMusica ?: 1f
+    fun obtenerVolumenEfectos(): Float {
+        val prefs = appContext?.getSharedPreferences("sound_prefs", Context.MODE_PRIVATE)
+        return prefs?.getFloat("sfx_volume", 1f) ?: 1f
+    }
+    fun obtenerVolumenMusica(): Float {
+        val prefs = appContext?.getSharedPreferences("sound_prefs", Context.MODE_PRIVATE)
+        return prefs?.getFloat("bgm_volume", 1f) ?: 1f
+    }
 
     fun cambiarVolumenEfectos(volume: Float) {
         gestorSonido?.cambiarVolumenEfectos(volume)
