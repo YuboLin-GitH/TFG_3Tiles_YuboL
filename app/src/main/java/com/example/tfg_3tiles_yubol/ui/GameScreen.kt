@@ -104,14 +104,46 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
             )
         }
 
-        // Renderizar por profundidad: z bajo primero (atrás), z alto encima (delante)
-        state.fichas.sortedBy { it.z }.forEach { tile ->
-            androidx.compose.runtime.key(tile.id) {
-                TileComponent(
-                    tile = tile,
-                    tamanoFicha = state.tamanoFicha,
-                    onClick = { viewModel.pulsarFicha(tile) }
-                )
+        // Calcular bounding box y escala para adaptar a pantalla
+        val fichas = state.fichas
+        if (fichas.isNotEmpty()) {
+            // Solo recalcular al cambiar de nivel, no al eliminar fichas
+            val bounds = remember(state.nivelActual) {
+                val minX = fichas.minOf { it.x }
+                val maxX = fichas.maxOf { it.x } + state.tamanoFicha
+                val minY = fichas.minOf { it.y }
+                val maxY = fichas.maxOf { it.y } + state.tamanoFicha
+                listOf(minX, maxX, minY, maxY)
+            }
+            val minX = bounds[0]
+            val maxX = bounds[1]
+            val minY = bounds[2]
+            val maxY = bounds[3]
+            val contenidoAncho = maxX - minX
+            val contenidoAlto = maxY - minY
+
+            val topReserva = 70f
+            val bottomReserva = 210f
+
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                val disponibleAncho = maxWidth.value
+                val disponibleAlto = maxHeight.value - topReserva - bottomReserva
+                val escala = minOf(disponibleAncho / contenidoAncho, disponibleAlto / contenidoAlto, 1f)
+                val trasladoX = (disponibleAncho - contenidoAncho * escala) / 2f - minX * escala
+                val trasladoY = topReserva + (disponibleAlto - contenidoAlto * escala) / 2f - minY * escala
+
+                fichas.sortedBy { it.z }.forEach { tile ->
+                    androidx.compose.runtime.key(tile.id) {
+                        TileComponent(
+                            tile = tile,
+                            tamanoFicha = state.tamanoFicha,
+                            onClick = { viewModel.pulsarFicha(tile) },
+                            escala = escala,
+                            trasladoX = trasladoX,
+                            trasladoY = trasladoY
+                        )
+                    }
+                }
             }
         }
 
@@ -122,24 +154,6 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                 .padding(bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.padding(bottom = 8.dp)
-            ) {
-                Button(
-                    onClick = { viewModel.deshacerMovimiento() },
-                    enabled = state.deshacerRestantes > 0
-                ) {
-                    Text("Deshacer (${state.deshacerRestantes})")
-                }
-                Button(
-                    onClick = { viewModel.mezclarFichas() },
-                    enabled = state.mezclasRestantes > 0
-                ) {
-                    Text("Mezclar (${state.mezclasRestantes})")
-                }
-            }
-
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -169,7 +183,6 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                         key = { it.id }
                     ) { tile ->
                         val isEliminating = state.fichasEliminando.any { it.id == tile.id }
-                        // Las fichas en la bandeja se ordenan en LazyRow
                         TileComponent(
                             tile = tile.copy(x = 0f, y = 0f),
                             tamanoFicha = tamanoFichaBandeja,
@@ -178,6 +191,24 @@ fun GameScreen(viewModel: GameViewModel, onViewRanking: () -> Unit = {}, onBackT
                             isEliminating = isEliminating
                         )
                     }
+                }
+            }
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                Button(
+                    onClick = { viewModel.deshacerMovimiento() },
+                    enabled = state.deshacerRestantes > 0
+                ) {
+                    Text("Deshacer (${state.deshacerRestantes})")
+                }
+                Button(
+                    onClick = { viewModel.mezclarFichas() },
+                    enabled = state.mezclasRestantes > 0
+                ) {
+                    Text("Mezclar (${state.mezclasRestantes})")
                 }
             }
         }
@@ -388,26 +419,29 @@ fun TileComponent(
     tamanoFicha: Float,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    isEliminating: Boolean = false
+    isEliminating: Boolean = false,
+    escala: Float = 1f,
+    trasladoX: Float = 0f,
+    trasladoY: Float = 0f
 ) {
-    val scale = remember { Animatable(1f) }
+    val animScale = remember { Animatable(1f) }
     val alpha = remember { Animatable(1f) }
 
     LaunchedEffect(isEliminating) {
         if (isEliminating) {
-            scale.animateTo(1.3f, tween(200))
+            animScale.animateTo(1.3f, tween(200))
             alpha.animateTo(0f, tween(250))
         } else {
-            scale.snapTo(1f)
+            animScale.snapTo(1f)
             alpha.snapTo(1f)
         }
     }
 
     Box(
         modifier = modifier
-            .offset(x = tile.x.dp, y = tile.y.dp)
-            .size(tamanoFicha.dp)
-            .scale(scale.value)
+            .offset(x = (trasladoX + tile.x * escala).dp, y = (trasladoY + tile.y * escala).dp)
+            .size((tamanoFicha * escala).dp)
+            .scale(animScale.value)
             .alpha(alpha.value)
             .clickable(enabled = !tile.estaBloqueada && !isEliminating) { onClick() }
     ) {
