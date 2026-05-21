@@ -1,5 +1,6 @@
 package com.example.tfg_3tiles_yubol.data.local
 
+import com.example.tfg_3tiles_yubol.R
 import com.example.tfg_3tiles_yubol.data.model.Level
 import com.example.tfg_3tiles_yubol.data.model.Tile
 
@@ -96,7 +97,7 @@ object LevelData {
                     if (indiceTipo >= todosLosTipos.size) break@outer
 
                     val tipo = todosLosTipos[indiceTipo++]
-                    val iconoRespaldo = com.example.tfg_3tiles_yubol.R.drawable.cangrejo
+                    val iconoRespaldo = R.drawable.cangrejo
                     val idIconoRecurso = TileIconMap.icons[tipo] ?: iconoRespaldo
                     fichasLista.add(
                         Tile(

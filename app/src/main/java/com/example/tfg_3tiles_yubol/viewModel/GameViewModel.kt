@@ -24,6 +24,7 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
 import kotlinx.serialization.Serializable
 import androidx.core.content.edit
+import com.example.tfg_3tiles_yubol.data.local.LevelData
 
 sealed class AuthStatus {
     data object Idle : AuthStatus()
@@ -250,9 +251,9 @@ class GameViewModel() : ViewModel() {
 
     fun cargarNivelActual() {
         val nivel = when (nivelActual) {
-            1 -> com.example.tfg_3tiles_yubol.data.local.LevelData.getLevel1()
-            2 -> com.example.tfg_3tiles_yubol.data.local.LevelData.getLevel2()
-            else -> com.example.tfg_3tiles_yubol.data.local.LevelData.getLevel1()
+            1 -> LevelData.getLevel1()
+            2 -> LevelData.getLevel2()
+            else -> LevelData.getLevel1()
         }
         cargarNivel(nivel)
         iniciarTemporizador()
